@@ -1,0 +1,201 @@
+# DailyBox Project - AI Coding Rules
+
+## 🎨 Color System - MANDATORY RULES
+
+### ✅ ALWAYS USE - Toss Design System Colors Only
+
+```tsx
+// ✅ CORRECT - Use only these predefined colors
+bg - toss - blue, text - toss - blue, border - toss - blue;
+bg - toss - blue - light, text - toss - blue - light, border - toss - blue - light;
+
+bg - neutral - white, bg - neutral - gray - 50, bg - neutral - gray - 100;
+bg - neutral - gray - 200, bg - neutral - gray - 300, bg - neutral - gray - 400;
+bg - neutral - gray - 500, bg - neutral - gray - 600, bg - neutral - gray - 700;
+bg - neutral - gray - 800, bg - neutral - gray - 900;
+
+bg - semantic - success, text - semantic - success, border - semantic - success;
+bg - semantic - warning, text - semantic - warning, border - semantic - warning;
+bg - semantic - error, text - semantic - error, border - semantic - error;
+
+text - text - primary, text - text - secondary, text - text - tertiary, text - text - inverse;
+bg - bg - primary, bg - bg - secondary, bg - bg - tertiary;
+```
+
+### ❌ NEVER USE - Forbidden Colors
+
+```tsx
+// ❌ FORBIDDEN - Never use these
+bg-blue-500, text-gray-800, border-red-300
+bg-green-400, text-purple-600, border-yellow-200
+style={{color: '#123456'}}, style={{backgroundColor: '#0066FF'}}
+```
+
+## 🎯 Color Usage Guidelines
+
+### Primary Actions & Branding
+
+-   Main buttons: `bg-toss-blue text-white`
+-   Secondary buttons: `bg-toss-blue-light text-toss-blue`
+-   Links & highlights: `text-toss-blue`
+
+### Text Hierarchy
+
+-   Main headings: `text-text-primary`
+-   Subheadings: `text-text-secondary`
+-   Descriptions: `text-text-tertiary`
+-   On dark backgrounds: `text-text-inverse`
+
+### Status & Feedback
+
+-   Success states: `bg-semantic-success text-white`
+-   Warning states: `bg-semantic-warning text-white`
+-   Error states: `bg-semantic-error text-white`
+
+### Backgrounds & Layouts
+
+-   Page background: `bg-bg-secondary`
+-   Card background: `bg-bg-primary`
+-   Section background: `bg-bg-tertiary`
+
+## 📱 Component Examples to Follow
+
+### Button Components
+
+```tsx
+// Primary Button
+<button className="bg-toss-blue text-white px-6 py-3 rounded-lg font-medium hover:opacity-90 transition-opacity">
+  Primary Action
+</button>
+
+// Secondary Button
+<button className="bg-toss-blue-light text-toss-blue px-6 py-3 rounded-lg font-medium hover:bg-opacity-80 transition-all">
+  Secondary Action
+</button>
+
+// Success Button
+<button className="bg-semantic-success text-white px-6 py-3 rounded-lg font-medium hover:opacity-90 transition-opacity">
+  완료
+</button>
+
+// Danger Button
+<button className="bg-semantic-error text-white px-6 py-3 rounded-lg font-medium hover:opacity-90 transition-opacity">
+  삭제
+</button>
+```
+
+### Card Components
+
+```tsx
+<div className="bg-bg-primary border border-neutral-gray-200 rounded-lg p-6 shadow-sm">
+    <div className="flex items-center mb-4">
+        <div className="w-12 h-12 bg-toss-blue rounded-full mr-3"></div>
+        <div>
+            <h3 className="text-text-primary font-semibold">카드 제목</h3>
+            <p className="text-text-secondary text-sm">카드 설명</p>
+        </div>
+    </div>
+    <div className="text-text-tertiary text-xs">부가 정보</div>
+</div>
+```
+
+### Form Components
+
+```tsx
+<div className="space-y-4">
+    <div>
+        <label className="block text-text-primary font-medium mb-2">입력 필드</label>
+        <input
+            className="w-full px-3 py-2 border border-neutral-gray-300 rounded-lg focus:border-toss-blue focus:outline-none"
+            placeholder="내용을 입력하세요"
+        />
+    </div>
+
+    <div className="bg-semantic-error/10 border border-semantic-error/20 rounded-lg p-3">
+        <p className="text-semantic-error text-sm">오류 메시지가 여기에 표시됩니다</p>
+    </div>
+</div>
+```
+
+## 🏗️ Project Architecture
+
+### Feature-Based Structure
+
+-   Follow FSD (Feature-Sliced Design) architecture
+-   Use entities/, features/, shared/ structure
+-   Components go in ui/ folders
+-   API logic in api/ folders
+-   Types in model/ folders
+
+### TypeScript Best Practices
+
+-   Always use TypeScript for new files
+-   Define proper interfaces and types
+-   Use React.FC for functional components
+-   Implement proper error handling
+
+### Next.js App Router
+
+-   Use app/ directory structure
+-   Implement Server Components by default
+-   Use Client Components ('use client') only when necessary
+-   Follow Next.js 15+ best practices
+
+## 🎯 Development Guidelines
+
+### Component Development
+
+-   Create reusable components in shared/ui/
+-   Use compound component patterns when appropriate
+-   Implement proper prop interfaces
+-   Add loading and error states
+
+### State Management
+
+-   Use Zustand for global state (already configured)
+-   Use React hooks for local state
+-   Follow established slice patterns in features/
+
+### Database & Storage
+
+-   Use Dexie.js for local storage (already configured)
+-   Follow repository pattern in entities/
+-   Implement proper data validation with Zod
+
+### Styling Approach
+
+-   Mobile-first responsive design
+-   Use Tailwind utilities only
+-   Follow the color system rules above
+-   Implement smooth transitions and hover states
+
+## 🚫 Absolute Prohibitions
+
+1. **Never use arbitrary color values**
+2. **Never use Tailwind default colors (blue-500, gray-800, etc.)**
+3. **Never use inline styles for colors**
+4. **Never create components without TypeScript types**
+5. **Never skip error handling in async operations**
+
+## 📋 Code Quality Checklist
+
+Before completing any task:
+
+-   [ ] Used only Toss Design System colors
+-   [ ] Followed proper TypeScript patterns
+-   [ ] Implemented responsive design
+-   [ ] Added proper error handling
+-   [ ] Used semantic HTML elements
+-   [ ] Ensured accessibility compliance
+-   [ ] Added loading states where needed
+-   [ ] Tested on mobile viewport
+
+## 🎨 Quick Color Reference
+
+**Primary**: `toss-blue` `toss-blue-light`
+**Text**: `text-primary` `text-secondary` `text-tertiary`
+**Background**: `bg-primary` `bg-secondary` `bg-tertiary`
+**Semantic**: `semantic-success` `semantic-warning` `semantic-error`
+**Neutral**: `neutral-gray-{50-900}`
+
+Remember: Consistency is key! Always refer to /colors page to verify color usage.
