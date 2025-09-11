@@ -1,201 +1,393 @@
-# DailyBox Project - AI Coding Rules
+# 📁 DailyBox Project - FSD Architecture Rules
 
-## 🎨 Color System - MANDATORY RULES
+## 🏗️ Feature-Sliced Design (FSD) 강제 규칙
 
-### ✅ ALWAYS USE - Toss Design System Colors Only
+### 📂 폴더 구조 규칙
 
-```tsx
-// ✅ CORRECT - Use only these predefined colors
-bg - toss - blue, text - toss - blue, border - toss - blue;
-bg - toss - blue - light, text - toss - blue - light, border - toss - blue - light;
+**CRITICAL**: 모든 새로운 기능은 반드시 FSD 구조를 따라야 합니다.
 
-bg - neutral - white, bg - neutral - gray - 50, bg - neutral - gray - 100;
-bg - neutral - gray - 200, bg - neutral - gray - 300, bg - neutral - gray - 400;
-bg - neutral - gray - 500, bg - neutral - gray - 600, bg - neutral - gray - 700;
-bg - neutral - gray - 800, bg - neutral - gray - 900;
-
-bg - semantic - success, text - semantic - success, border - semantic - success;
-bg - semantic - warning, text - semantic - warning, border - semantic - warning;
-bg - semantic - error, text - semantic - error, border - semantic - error;
-
-text - text - primary, text - text - secondary, text - text - tertiary, text - text - inverse;
-bg - bg - primary, bg - bg - secondary, bg - bg - tertiary;
+```
+src/
+├── app/                    # 📱 App Layer (앱 실행 요소)
+├── pages/                  # 📄 Pages Layer (전체 페이지/라우팅)
+├── widgets/                # 🔧 Widgets Layer (독립적 대형 UI 블록)
+├── features/               # ⚡ Features Layer (재사용 비즈니스 기능)
+├── entities/               # 🗃️ Entities Layer (핵심 도메인 Entity)
+└── shared/                 # 🔗 Shared Layer (범용 유틸리티)
 ```
 
-### ❌ NEVER USE - Forbidden Colors
+### 🎯 계층별 역할 정의
+
+#### 📱 App Layer (`src/app/`)
+
+**Layer 순위: 1위 (최상위)**
+
+-   **용도**: 앱 실행을 위한 모든 요소 (Routing, Entrypoint, Global Styles, Provider)
+-   **구조**: Slice 없이 바로 Segment로 구성
+-   **규칙**:
+    -   비즈니스 로직 금지
+    -   모든 하위 계층 import 가능 (pages, widgets, features, entities, shared)
+    -   'use client' 최소 사용
+-   **예시**: `src/app/layout.tsx`, `src/app/globals.css`, `src/app/providers.tsx`
+
+#### 📄 Pages Layer (`src/pages/`)
+
+**Layer 순위: 2위**
+
+-   **용도**: 전체 페이지 또는 중첩 라우팅의 핵심 영역
+-   **구조**: `pages/{pageName}/{ui,api,model,lib}/`
+-   **규칙**:
+    -   하위 계층만 import 가능 (widgets, features, entities, shared)
+    -   각 페이지는 독립적인 Slice
+    -   비즈니스 로직은 features로 위임
+-   **예시**: `src/pages/calculator/`, `src/pages/home/`
+
+#### 🔧 Widgets Layer (`src/widgets/`)
+
+**Layer 순위: 3위**
+
+-   **용도**: 독립적으로 동작하는 대형 UI·기능 블록
+-   **구조**: `widgets/{widgetName}/{ui,api,model,lib}/`
+-   **규칙**:
+    -   하위 계층만 import 가능 (features, entities, shared)
+    -   페이지보다 작지만 feature보다 큰 단위
+    -   재사용 가능한 복합 컴포넌트
+-   **예시**: `src/widgets/header/`, `src/widgets/sidebar/`, `src/widgets/calculator-widget/`
+
+#### ⚡ Features Layer (`src/features/`)
+
+**Layer 순위: 4위**
+
+-   **용도**: 제품 전반에서 재사용되는 비즈니스 기능
+-   **구조**: `features/{featureName}/{ui,api,model,lib}/`
+-   **규칙**:
+    -   하위 계층만 import 가능 (entities, shared)
+    -   다른 features 간 직접 import 금지
+    -   Zustand 슬라이스는 여기에 배치
+    -   사용자 시나리오 기반 분리
+-   **예시**: `src/features/todo-management/`, `src/features/user-auth/`
+
+#### 🗃️ Entities Layer (`src/entities/`)
+
+**Layer 순위: 5위**
+
+-   **용도**: user, product 같은 핵심 도메인 Entity
+-   **구조**: `entities/{entityName}/{ui,api,model,lib}/`
+-   **규칙**:
+    -   shared 계층만 import 가능
+    -   도메인별 Repository 패턴 구현
+    -   순수 도메인 로직만 포함
+    -   비즈니스 로직 배제
+-   **예시**: `src/entities/user/`, `src/entities/calculator/`, `src/entities/todo/`
+
+#### 🔗 Shared Layer (`src/shared/`)
+
+**Layer 순위: 6위 (최하위)**
+
+-   **용도**: 프로젝트 전반에서 재사용되는 일반 유틸리티
+-   **구조**: Slice 없이 바로 Segment로 구성
+-   **규칙**:
+    -   다른 계층 import 절대 금지
+    -   순수 유틸리티 및 UI 컴포넌트만
+    -   프레임워크 독립적 코드
+-   **예시**: `src/shared/ui/`, `src/shared/lib/`, `src/shared/api/`
+
+### 🧩 컴포넌트 재사용성 강제 규칙
+
+#### ⚠️ 중복 코드 감지 기준
+
+1. **UI 패턴이 3번 이상 반복되면 공통 컴포넌트 생성 필수**
+2. **동일한 props 구조가 2번 이상 나타나면 인터페이스 추상화**
+3. **비슷한 스타일링이 여러 컴포넌트에서 사용되면 shared/ui로 이동**
+
+#### ✅ 재사용 컴포넌트 생성 규칙
+
+**ALWAYS CREATE IN**: `src/shared/ui/`
 
 ```tsx
-// ❌ FORBIDDEN - Never use these
-bg-blue-500, text-gray-800, border-red-300
-bg-green-400, text-purple-600, border-yellow-200
-style={{color: '#123456'}}, style={{backgroundColor: '#0066FF'}}
+// ✅ REQUIRED - 컴포넌트 파일 구조
+/**
+ * ComponentName Component
+ * 컴포넌트 용도 및 사용처 설명
+ */
+
+import React from 'react';
+
+export interface ComponentNameProps {
+    /** JSDoc으로 모든 props 설명 필수 */
+    title: string;
+    /** 선택적 props는 ? 표시 */
+    subtitle?: string;
+    /** 테마나 variant props는 union type 사용 */
+    theme: 'blue' | 'success' | 'warning' | 'secondary';
+}
+
+const ComponentName: React.FC<ComponentNameProps> = ({ title, subtitle, theme }) => {
+    return <div className={`${getThemeStyles(theme)} base-styles`}>{/* 컴포넌트 내용 */}</div>;
+};
+
+export default ComponentName;
 ```
 
-## 🎯 Color Usage Guidelines
+#### 🎨 Toss Design System 색상 강제 규칙
 
-### Primary Actions & Branding
-
--   Main buttons: `bg-toss-blue text-white`
--   Secondary buttons: `bg-toss-blue-light text-toss-blue`
--   Links & highlights: `text-toss-blue`
-
-### Text Hierarchy
-
--   Main headings: `text-text-primary`
--   Subheadings: `text-text-secondary`
--   Descriptions: `text-text-tertiary`
--   On dark backgrounds: `text-text-inverse`
-
-### Status & Feedback
-
--   Success states: `bg-semantic-success text-white`
--   Warning states: `bg-semantic-warning text-white`
--   Error states: `bg-semantic-error text-white`
-
-### Backgrounds & Layouts
-
--   Page background: `bg-bg-secondary`
--   Card background: `bg-bg-primary`
--   Section background: `bg-bg-tertiary`
-
-## 📱 Component Examples to Follow
-
-### Button Components
+**CRITICAL**: 반드시 미리 정의된 색상만 사용
 
 ```tsx
-// Primary Button
-<button className="bg-toss-blue text-white px-6 py-3 rounded-lg font-medium hover:opacity-90 transition-opacity">
-  Primary Action
-</button>
+// ✅ ALLOWED - Toss Design System Colors Only
+const themeStyles = {
+    blue: 'bg-toss-blue/10 border-toss-blue/25',
+    success: 'bg-semantic-success/15 border-semantic-success/30',
+    warning: 'bg-semantic-warning/15 border-semantic-warning/30',
+    secondary: 'bg-toss-blue-light/40 border-toss-blue/20',
+} as const;
 
-// Secondary Button
-<button className="bg-toss-blue-light text-toss-blue px-6 py-3 rounded-lg font-medium hover:bg-opacity-80 transition-all">
-  Secondary Action
-</button>
-
-// Success Button
-<button className="bg-semantic-success text-white px-6 py-3 rounded-lg font-medium hover:opacity-90 transition-opacity">
-  완료
-</button>
-
-// Danger Button
-<button className="bg-semantic-error text-white px-6 py-3 rounded-lg font-medium hover:opacity-90 transition-opacity">
-  삭제
-</button>
+// ❌ FORBIDDEN - 임의 색상 사용 금지
+const badStyles = 'bg-blue-500 text-gray-800'; // 절대 사용 금지
 ```
 
-### Card Components
+### 📋 새 페이지 개발 체크리스트
 
-```tsx
-<div className="bg-bg-primary border border-neutral-gray-200 rounded-lg p-6 shadow-sm">
-    <div className="flex items-center mb-4">
-        <div className="w-12 h-12 bg-toss-blue rounded-full mr-3"></div>
-        <div>
-            <h3 className="text-text-primary font-semibold">카드 제목</h3>
-            <p className="text-text-secondary text-sm">카드 설명</p>
-        </div>
+#### 1️⃣ 기획 단계
+
+-   [ ] 기능별로 entities와 features 분리 계획
+-   [ ] 재사용 가능한 UI 패턴 식별
+-   [ ] 기존 shared/ui 컴포넌트 재사용 검토
+
+#### 2️⃣ 개발 단계 - entities 먼저
+
+```bash
+# entities/{domain}/model/types.ts - 타입 정의
+# entities/{domain}/api/{domain}.repository.ts - 데이터 레이어
+# entities/{domain}/ui/ - 도메인별 UI 컴포넌트
+```
+
+#### 3️⃣ 개발 단계 - features 구현
+
+```bash
+# features/{feature}/model/{feature}.slice.ts - Zustand 슬라이스
+# features/{feature}/ui/ - 비즈니스 로직 UI
+```
+
+#### 4️⃣ 개발 단계 - 공통 컴포넌트
+
+```bash
+# shared/ui/ - 재사용 가능한 UI 컴포넌트
+# shared/lib/utils/ - 공통 유틸리티
+```
+
+#### 5️⃣ 개발 단계 - 페이지 조합
+
+```bash
+# app/{route}/page.tsx - 최종 페이지 조합
+```
+
+### 🔄 리팩토링 트리거
+
+다음 상황에서는 **즉시 리팩토링** 필수:
+
+1. **코드 중복 발견 시**
+
+    ```tsx
+    // ❌ 이런 코드가 2번 이상 나타나면
+    <div className="bg-bg-primary rounded-2xl p-5 shadow-sm">
+        <div className="text-4xl">{icon}</div>
+        <h3 className="text-neutral-gray-700">{title}</h3>
     </div>
-    <div className="text-text-tertiary text-xs">부가 정보</div>
-</div>
+
+    // ✅ 즉시 공통 컴포넌트로 추출
+    <SharedCard icon={icon} title={title} />
+    ```
+
+2. **긴 컴포넌트 파일 (100줄 이상)**
+
+    - 즉시 기능별로 분리
+    - shared/ui에 재사용 컴포넌트 추출
+
+3. **비슷한 props 인터페이스**
+    - 공통 인터페이스로 추상화
+    - shared/model/types.ts에 정의
+
+### 🚫 금지 사항
+
+#### ❌ 절대 하지 말 것
+
+**📏 Import 계층 규칙 (상위 Layer → 하위 Layer만 허용)**
+
+```
+app     → pages, widgets, features, entities, shared ✅
+pages   → widgets, features, entities, shared ✅
+widgets → features, entities, shared ✅
+features → entities, shared ✅
+entities → shared ✅
+shared  → (아무것도 import 금지) ❌
 ```
 
-### Form Components
+1. **상위 계층으로 import 금지**
 
-```tsx
-<div className="space-y-4">
-    <div>
-        <label className="block text-text-primary font-medium mb-2">입력 필드</label>
-        <input
-            className="w-full px-3 py-2 border border-neutral-gray-300 rounded-lg focus:border-toss-blue focus:outline-none"
-            placeholder="내용을 입력하세요"
-        />
-    </div>
+    ```tsx
+    // ❌ FORBIDDEN - entities에서 features import
+    import { useCalculator } from '@/features/calculator/model/calc.slice';
 
-    <div className="bg-semantic-error/10 border border-semantic-error/20 rounded-lg p-3">
-        <p className="text-semantic-error text-sm">오류 메시지가 여기에 표시됩니다</p>
-    </div>
-</div>
+    // ❌ FORBIDDEN - shared에서 다른 계층 import
+    import { Calculator } from '@/entities/calculator/ui/Calculator';
+
+    // ✅ ALLOWED - features에서 entities import
+    import { calcRepository } from '@/entities/calculator/api/calc.repository';
+    ```
+
+2. **같은 계층 간 직접 의존성 금지**
+
+    ```tsx
+    // ❌ FORBIDDEN - feature 간 직접 import
+    import { todoSlice } from '@/features/todo/model/todo.slice';
+    // 다른 feature에서 직접 import 금지
+
+    // ✅ ALLOWED - shared를 통한 통신
+    import { useAppStore } from '@/shared/model/store';
+    ```
+
+3. **App/Shared Layer에서 Slice 사용 금지**
+
+    ```tsx
+    // ❌ FORBIDDEN - app에서 slice 생성
+    src / app / calculator / ui / Calculator.tsx;
+
+    // ✅ CORRECT - app은 바로 segment
+    src / app / calculator / page.tsx;
+
+    // ❌ FORBIDDEN - shared에서 slice 생성
+    src / shared / calculator / ui / Calculator.tsx;
+
+    // ✅ CORRECT - shared는 바로 segment
+    src / shared / ui / Calculator.tsx;
+    ```
+
+4. **페이지에 비즈니스 로직**
+
+    ```tsx
+    // ❌ FORBIDDEN - app/page.tsx에서
+    const [todos, setTodos] = useState([]);
+    const handleAddTodo = async () => {
+        /* 비즈니스 로직 */
+    };
+
+    // ✅ CORRECT - features에서 처리
+    const { todos, addTodo } = useTodoSlice();
+    ```
+
+5. **임의 색상 사용**
+
+    ```tsx
+    // ❌ FORBIDDEN
+    style={{backgroundColor: '#0066FF'}}
+    className="bg-blue-500"
+
+    // ✅ CORRECT
+    className="bg-toss-blue/10"
+    ```
+
+### 📊 성과 측정
+
+매 개발 완료 시 체크:
+
+-   [ ] 중복 코드 0%
+-   [ ] FSD 계층 구조 준수
+-   [ ] 재사용 컴포넌트 활용도
+-   [ ] Toss 디자인 시스템 준수
+-   [ ] TypeScript 타입 안전성
+
+### 📂 표준 Segment 정의 (FSD 공식)
+
+모든 Slice는 다음 **5가지 표준 Segment**로 구성됩니다:
+
+#### 🎨 `ui/` Segment
+
+-   **용도**: UI components, date formatter, styles 등 UI 표현과 직접 관련된 코드
+-   **예시**: `Button.tsx`, `Modal.tsx`, `formatDate.ts`, `styles.module.css`
+-   **규칙**: 비즈니스 로직 배제, 순수 표현 계층
+
+#### 🌐 `api/` Segment
+
+-   **용도**: request functions, data types, mappers 등 백엔드 통신 및 데이터 로직
+-   **예시**: `userApi.ts`, `TodoResponse.ts`, `apiClient.ts`
+-   **규칙**: HTTP 요청, 데이터 변환, API 타입 정의
+
+#### 🧠 `model/` Segment
+
+-   **용도**: schema, interfaces, store, business logic 등 애플리케이션 도메인 모델
+-   **예시**: `todoSlice.ts`, `User.interface.ts`, `validation.schema.ts`
+-   **규칙**: 상태 관리, 비즈니스 규칙, 타입 정의
+
+#### 📚 `lib/` Segment
+
+-   **용도**: 해당 Slice에서 여러 모듈이 함께 사용하는 공통 library code
+-   **예시**: `utils.ts`, `helpers.ts`, `constants.ts`
+-   **규칙**: Slice 내부에서만 사용되는 유틸리티
+
+#### ⚙️ `config/` Segment
+
+-   **용도**: configuration files, feature flags 등 환경·기능 설정
+-   **예시**: `settings.ts`, `featureFlags.ts`, `environment.ts`
+-   **규칙**: 설정값, 환경변수, 기능 토글
+
+### 🔧 도구 활용
+
+-   **Zustand**: features/{feature}/model/ 슬라이스
+-   **Dexie.js**: entities/{entity}/api/ 레포지토리
+-   **Tailwind**: 미리 정의된 Toss 색상만
+-   **TypeScript**: 모든 컴포넌트 인터페이스 필수
+
+## 🎯 핵심 원칙
+
+1. **재사용성 우선**: 같은 패턴이 보이면 즉시 공통화
+2. **계층 분리**: 각 계층의 역할을 명확히 구분
+3. **타입 안전성**: 모든 props와 상태는 타입 정의
+4. **디자인 일관성**: Toss 디자인 시스템 엄격 준수
+5. **성능 최적화**: RSC 우선, 'use client' 최소화
+
+### 🚀 점진적 FSD 도입 가이드
+
+기존 프로젝트에서 FSD를 도입하는 단계별 방법:
+
+#### 1단계: 기반 다지기
+
+```bash
+# app, shared Layer를 먼저 정리
+mkdir -p src/app src/shared
+mv src/components/* src/shared/ui/  # 기존 컴포넌트 이동
+mv src/utils/* src/shared/lib/      # 기존 유틸리티 이동
 ```
 
-## 🏗️ Project Architecture
+#### 2단계: 대략적 분배
 
-### Feature-Based Structure
+```bash
+# 기존 UI를 widgets, pages Layer로 대략 분배
+# 이 과정에서 FSD 규칙 위반해도 괜찮음
+mkdir -p src/pages src/widgets
+```
 
--   Follow FSD (Feature-Sliced Design) architecture
--   Use entities/, features/, shared/ structure
--   Components go in ui/ folders
--   API logic in api/ folders
--   Types in model/ folders
+#### 3단계: 점진적 정리
 
-### TypeScript Best Practices
+```bash
+# Import 위반을 하나씩 해결하면서 entities, features 추출
+mkdir -p src/entities src/features
+# 기존 코드에서 도메인별로 entities 분리
+# 비즈니스 로직을 features로 이동
+```
 
--   Always use TypeScript for new files
--   Define proper interfaces and types
--   Use React.FC for functional components
--   Implement proper error handling
+> **주의**: 리팩토링 중에는 새로운 대규모 Entity 추가를 피하세요.
 
-### Next.js App Router
+### 🏁 마이그레이션 완료 체크리스트
 
--   Use app/ directory structure
--   Implement Server Components by default
--   Use Client Components ('use client') only when necessary
--   Follow Next.js 15+ best practices
+-   [ ] 모든 import가 계층 규칙 준수
+-   [ ] 중복 코드 0%
+-   [ ] 각 Layer별 역할 명확히 분리
+-   [ ] Slice 간 독립성 확보
+-   [ ] 표준 Segment 구조 적용
 
-## 🎯 Development Guidelines
+**Remember**: "같은 코드를 두 번 쓰는 순간 공통 컴포넌트로!"
 
-### Component Development
+---
 
--   Create reusable components in shared/ui/
--   Use compound component patterns when appropriate
--   Implement proper prop interfaces
--   Add loading and error states
-
-### State Management
-
--   Use Zustand for global state (already configured)
--   Use React hooks for local state
--   Follow established slice patterns in features/
-
-### Database & Storage
-
--   Use Dexie.js for local storage (already configured)
--   Follow repository pattern in entities/
--   Implement proper data validation with Zod
-
-### Styling Approach
-
--   Mobile-first responsive design
--   Use Tailwind utilities only
--   Follow the color system rules above
--   Implement smooth transitions and hover states
-
-## 🚫 Absolute Prohibitions
-
-1. **Never use arbitrary color values**
-2. **Never use Tailwind default colors (blue-500, gray-800, etc.)**
-3. **Never use inline styles for colors**
-4. **Never create components without TypeScript types**
-5. **Never skip error handling in async operations**
-
-## 📋 Code Quality Checklist
-
-Before completing any task:
-
--   [ ] Used only Toss Design System colors
--   [ ] Followed proper TypeScript patterns
--   [ ] Implemented responsive design
--   [ ] Added proper error handling
--   [ ] Used semantic HTML elements
--   [ ] Ensured accessibility compliance
--   [ ] Added loading states where needed
--   [ ] Tested on mobile viewport
-
-## 🎨 Quick Color Reference
-
-**Primary**: `toss-blue` `toss-blue-light`
-**Text**: `text-primary` `text-secondary` `text-tertiary`
-**Background**: `bg-primary` `bg-secondary` `bg-tertiary`
-**Semantic**: `semantic-success` `semantic-warning` `semantic-error`
-**Neutral**: `neutral-gray-{50-900}`
-
-Remember: Consistency is key! Always refer to /colors page to verify color usage.
+_참고: [Feature-Sliced Design 공식 문서](https://feature-sliced.github.io/documentation/kr/docs/get-started/overview)_

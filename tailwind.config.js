@@ -1,9 +1,18 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
     content: [
-        './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
-        './src/components/**/*.{js,ts,jsx,tsx,mdx}',
-        './src/app/**/*.{js,ts,jsx,tsx,mdx}',
+        // Next.js App Router
+        './app/**/*.{js,ts,jsx,tsx,mdx}',
+
+        // FSD Layers
+        './src/01-app/**/*.{js,ts,jsx,tsx,mdx}',
+        './src/02-pages/**/*.{js,ts,jsx,tsx,mdx}',
+        './src/03-widgets/**/*.{js,ts,jsx,tsx,mdx}',
+        './src/04-features/**/*.{js,ts,jsx,tsx,mdx}',
+        './src/05-entities/**/*.{js,ts,jsx,tsx,mdx}',
+        './src/06-shared/**/*.{js,ts,jsx,tsx,mdx}',
+
+        // Legacy paths (if any remaining)
         './src/shared/**/*.{js,ts,jsx,tsx,mdx}',
         './src/entities/**/*.{js,ts,jsx,tsx,mdx}',
         './src/features/**/*.{js,ts,jsx,tsx,mdx}',
