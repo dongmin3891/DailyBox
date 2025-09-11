@@ -16,81 +16,163 @@ src/
 └── shared/                 # 🔗 Shared Layer (범용 유틸리티)
 ```
 
-### 🎯 계층별 역할 정의
+### 🎯 FSD 계층(Layers) 정의
+
+**CRITICAL**: 프로젝트마다 동일한 계층 구조를 유지하며, 상위 계층에서 하위 계층으로만 import 가능
+
+```
+📊 Import 허용 방향 (상위 → 하위만 가능)
+app     → pages, widgets, features, entities, shared ✅
+pages   → widgets, features, entities, shared ✅  
+widgets → features, entities, shared ✅
+features → entities, shared ✅
+entities → shared ✅
+shared  → (독립성 유지, 아무것도 import 금지) ❌
+```
 
 #### 📱 App Layer (`src/app/`)
+**순위: 1위 (최상위) | 구조: Segment 직접 구성**
 
-**Layer 순위: 1위 (최상위)**
-
--   **용도**: 앱 실행을 위한 모든 요소 (Routing, Entrypoint, Global Styles, Provider)
--   **구조**: Slice 없이 바로 Segment로 구성
+-   **목적**: 공통 설정, 스타일, providers - 앱 실행을 위한 인프라
+-   **포함**: Routing, Entrypoint, Global Styles, Provider, Configuration
 -   **규칙**:
-    -   비즈니스 로직 금지
-    -   모든 하위 계층 import 가능 (pages, widgets, features, entities, shared)
+    -   모든 하위 계층 import 가능 
+    -   비즈니스 로직 절대 금지
+    -   Slice 구조 사용 금지 (바로 Segment로 구성)
     -   'use client' 최소 사용
--   **예시**: `src/app/layout.tsx`, `src/app/globals.css`, `src/app/providers.tsx`
+-   **예시**: `app/layout.tsx`, `app/globals.css`, `app/providers.tsx`
 
 #### 📄 Pages Layer (`src/pages/`)
+**순위: 2위 | 구조: Slice 기반**
 
-**Layer 순위: 2위**
-
--   **용도**: 전체 페이지 또는 중첩 라우팅의 핵심 영역
+-   **목적**: 페이지 컴포지션 - entities, features, widgets를 합쳐서 완전한 페이지 생성
+-   **포함**: 전체 페이지, 중첩 라우팅의 핵심 영역
 -   **구조**: `pages/{pageName}/{ui,api,model,lib}/`
 -   **규칙**:
-    -   하위 계층만 import 가능 (widgets, features, entities, shared)
+    -   하위 계층만 import (widgets, features, entities, shared)
     -   각 페이지는 독립적인 Slice
-    -   비즈니스 로직은 features로 위임
--   **예시**: `src/pages/calculator/`, `src/pages/home/`
+    -   비즈니스 로직은 features로 위임, 조합 역할만
+-   **예시**: `pages/calculator/`, `pages/home/`, `pages/dashboard/`
 
 #### 🔧 Widgets Layer (`src/widgets/`)
+**순위: 3위 | 구조: Slice 기반**
 
-**Layer 순위: 3위**
-
--   **용도**: 독립적으로 동작하는 대형 UI·기능 블록
+-   **목적**: 의미있는 독립 블록 - entities와 features를 합쳐서 재사용 가능한 위젯 생성
+-   **포함**: IssuesList, UserProfile, ProductCard 같은 독립적 대형 UI·기능 블록
 -   **구조**: `widgets/{widgetName}/{ui,api,model,lib}/`
 -   **규칙**:
-    -   하위 계층만 import 가능 (features, entities, shared)
+    -   하위 계층만 import (features, entities, shared)
     -   페이지보다 작지만 feature보다 큰 단위
-    -   재사용 가능한 복합 컴포넌트
--   **예시**: `src/widgets/header/`, `src/widgets/sidebar/`, `src/widgets/calculator-widget/`
+    -   여러 페이지에서 재사용 가능한 복합 컴포넌트
+-   **예시**: `widgets/calculator-widget/`, `widgets/todo-list/`, `widgets/user-profile/`
 
 #### ⚡ Features Layer (`src/features/`)
+**순위: 4위 | 구조: Slice 기반**
 
-**Layer 순위: 4위**
-
--   **용도**: 제품 전반에서 재사용되는 비즈니스 기능
+-   **목적**: 비즈니스 관련 유저 상호작용과 actions
+-   **포함**: SendComment, AddToCard, UsersSearch 같은 사용자 시나리오
 -   **구조**: `features/{featureName}/{ui,api,model,lib}/`
 -   **규칙**:
-    -   하위 계층만 import 가능 (entities, shared)
-    -   다른 features 간 직접 import 금지
+    -   하위 계층만 import (entities, shared)
+    -   **CRITICAL**: 같은 계층 간 직접 import 절대 금지
     -   Zustand 슬라이스는 여기에 배치
-    -   사용자 시나리오 기반 분리
--   **예시**: `src/features/todo-management/`, `src/features/user-auth/`
+    -   사용자 시나리오와 비즈니스 로직 중심
+-   **예시**: `features/todo-management/`, `features/user-auth/`, `features/payment-process/`
 
 #### 🗃️ Entities Layer (`src/entities/`)
+**순위: 5위 | 구조: Slice 기반**
 
-**Layer 순위: 5위**
-
--   **용도**: user, product 같은 핵심 도메인 Entity
+-   **목적**: 핵심 비즈니스 entities - User, Product, Order 같은 도메인 모델
+-   **포함**: 순수 도메인 로직, 데이터 구조, Repository 패턴
 -   **구조**: `entities/{entityName}/{ui,api,model,lib}/`
 -   **규칙**:
     -   shared 계층만 import 가능
     -   도메인별 Repository 패턴 구현
-    -   순수 도메인 로직만 포함
-    -   비즈니스 로직 배제
--   **예시**: `src/entities/user/`, `src/entities/calculator/`, `src/entities/todo/`
+    -   비즈니스 로직 배제, 순수 도메인 모델만
+    -   **CRITICAL**: 같은 계층 간 직접 import 절대 금지
+-   **예시**: `entities/user/`, `entities/calculator/`, `entities/todo/`
 
 #### 🔗 Shared Layer (`src/shared/`)
+**순위: 6위 (최하위) | 구조: Segment 직접 구성**
 
-**Layer 순위: 6위 (최하위)**
-
--   **용도**: 프로젝트 전반에서 재사용되는 일반 유틸리티
--   **구조**: Slice 없이 바로 Segment로 구성
+-   **목적**: 재사용 가능한 기능 - 프로젝트, 비즈니스와 관련 없는 범용 코드
+-   **포함**: UIKit, libs, API, project-agnostic utilities
+-   **구조**: `shared/{segment}/` (Slice 없이 바로 Segment)
 -   **규칙**:
-    -   다른 계층 import 절대 금지
+    -   **CRITICAL**: 다른 모든 계층 import 절대 금지
     -   순수 유틸리티 및 UI 컴포넌트만
     -   프레임워크 독립적 코드
--   **예시**: `src/shared/ui/`, `src/shared/lib/`, `src/shared/api/`
+    -   비즈니스 로직 완전 배제
+-   **예시**: `shared/ui/`, `shared/lib/`, `shared/api/`, `shared/config/`
+
+### 🍰 Slices (비즈니스 도메인 분리)
+
+**CRITICAL**: business domain에 따라 분리된 코드 단위
+
+#### 📋 Slice 정의와 역할
+
+-   **목적**: 논리적으로 관련 있는 모듈을 한 곳에 모음
+-   **분리 기준**: 비즈니스 도메인별 (User, Product, Calculator, Todo 등)
+-   **독립성**: 같은 layer의 다른 slices를 참조할 수 없음
+
+#### 🚫 Slice 간 참조 금지 규칙
+
+```tsx
+// ❌ FORBIDDEN - 같은 계층 slice 간 직접 참조
+// features/todo/ ↔ features/user/ 직접 import 금지
+import { userSlice } from '@/features/user/model/user.slice';
+
+// ❌ FORBIDDEN - entities 간 직접 참조
+// entities/product/ ↔ entities/order/ 직접 import 금지  
+import { Product } from '@/entities/product/model/types';
+
+// ✅ ALLOWED - shared를 통한 간접 통신
+import { useAppStore } from '@/shared/model/store';
+import { BaseEntity } from '@/shared/model/types';
+```
+
+#### 🔄 Slice 간 통신 방법
+
+**1. Shared Layer를 통한 통신**
+```tsx
+// shared/model/store.ts - 전역 상태 관리
+export const useAppStore = create((set) => ({
+    // 여러 feature에서 공유되는 상태
+}));
+
+// features/todo/model/todo.slice.ts
+import { useAppStore } from '@/shared/model/store';
+```
+
+**2. 상위 Layer에서 조합**
+```tsx
+// pages/dashboard/ui/DashboardPage.tsx
+import { TodoWidget } from '@/widgets/todo-list';
+import { UserWidget } from '@/widgets/user-profile';
+
+// pages에서 여러 widget/feature 조합
+```
+
+#### 📂 Slice 구조 예시
+
+```
+features/
+├── todo-management/          # Todo Slice
+│   ├── ui/                  # Todo 관련 UI
+│   ├── model/               # Todo 상태 관리
+│   ├── api/                 # Todo API 호출
+│   └── lib/                 # Todo 유틸리티
+├── user-auth/               # User Auth Slice  
+│   ├── ui/
+│   ├── model/
+│   ├── api/
+│   └── lib/
+└── payment-process/         # Payment Slice
+    ├── ui/
+    ├── model/
+    ├── api/
+    └── lib/
+```
 
 ### 🧩 컴포넌트 재사용성 강제 규칙
 
@@ -297,39 +379,83 @@ shared  → (아무것도 import 금지) ❌
 -   [ ] Toss 디자인 시스템 준수
 -   [ ] TypeScript 타입 안전성
 
-### 📂 표준 Segment 정의 (FSD 공식)
+### 📂 Segments (기술적 목적별 모듈 분리)
 
-모든 Slice는 다음 **5가지 표준 Segment**로 구성됩니다:
+**CRITICAL**: slices 안의 모듈들을 기술적 목적에 따라 분리하고 index.ts로 외부 노출 제어
+
+#### 🎯 Segment 역할과 구조
+
+모든 Slice는 다음 **표준 Segment**로 구성:
 
 #### 🎨 `ui/` Segment
-
--   **용도**: UI components, date formatter, styles 등 UI 표현과 직접 관련된 코드
--   **예시**: `Button.tsx`, `Modal.tsx`, `formatDate.ts`, `styles.module.css`
+-   **목적**: UI components, date formatter, styles 등 UI 표현과 직접 관련된 코드
+-   **포함**: React 컴포넌트, 스타일링, UI 로직
+-   **예시**: `Button.tsx`, `Modal.tsx`, `TodoList.tsx`, `styles.module.css`
 -   **규칙**: 비즈니스 로직 배제, 순수 표현 계층
 
+#### 🧠 `model/` Segment  
+-   **목적**: store, actions, schema, interfaces, business logic
+-   **포함**: Zustand 슬라이스, 상태 관리, 비즈니스 규칙, 타입 정의
+-   **예시**: `todoSlice.ts`, `User.interface.ts`, `validation.schema.ts`, `types.ts`
+-   **규칙**: 애플리케이션 도메인 모델과 상태 관리
+
 #### 🌐 `api/` Segment
-
--   **용도**: request functions, data types, mappers 등 백엔드 통신 및 데이터 로직
--   **예시**: `userApi.ts`, `TodoResponse.ts`, `apiClient.ts`
--   **규칙**: HTTP 요청, 데이터 변환, API 타입 정의
-
-#### 🧠 `model/` Segment
-
--   **용도**: schema, interfaces, store, business logic 등 애플리케이션 도메인 모델
--   **예시**: `todoSlice.ts`, `User.interface.ts`, `validation.schema.ts`
--   **규칙**: 상태 관리, 비즈니스 규칙, 타입 정의
+-   **목적**: request functions, data types, mappers 등 백엔드 통신 및 데이터 로직  
+-   **포함**: HTTP 요청, 데이터 변환, Repository 패턴
+-   **예시**: `userApi.ts`, `TodoResponse.ts`, `apiClient.ts`, `todo.repository.ts`
+-   **규칙**: 외부 데이터 소스와의 통신 담당
 
 #### 📚 `lib/` Segment
-
--   **용도**: 해당 Slice에서 여러 모듈이 함께 사용하는 공통 library code
--   **예시**: `utils.ts`, `helpers.ts`, `constants.ts`
+-   **목적**: utils/hooks - 해당 Slice에서 여러 모듈이 함께 사용하는 공통 library code
+-   **포함**: Slice 전용 유틸리티, 커스텀 훅, 헬퍼 함수
+-   **예시**: `utils.ts`, `helpers.ts`, `constants.ts`, `useTodo.ts`
 -   **규칙**: Slice 내부에서만 사용되는 유틸리티
 
-#### ⚙️ `config/` Segment
+### 📤 모듈 노출 제어 (index.ts)
 
--   **용도**: configuration files, feature flags 등 환경·기능 설정
--   **예시**: `settings.ts`, `featureFlags.ts`, `environment.ts`
--   **규칙**: 설정값, 환경변수, 기능 토글
+**CRITICAL**: 각 Slice와 Segment는 index.ts로 외부 노출하고 싶은 것만 노출
+
+#### ✅ 올바른 index.ts 패턴
+
+```tsx
+// features/todo/index.ts - Feature Slice 노출
+export { TodoList } from './ui/TodoList';
+export { useTodoSlice } from './model/todo.slice';
+export { todoRepository } from './api/todo.repository';
+// lib는 내부용이므로 노출하지 않음
+
+// entities/todo/index.ts - Entity Slice 노출  
+export { Todo } from './ui/Todo';
+export type { TodoEntity, CreateTodoDTO } from './model/types';
+export { todoRepository } from './api/todo.repository';
+
+// shared/ui/index.ts - Shared UI 노출
+export { Button } from './Button';
+export { Card } from './Card';
+export { Input } from './Input';
+export type { ButtonProps, CardProps } from './types';
+```
+
+#### 🎯 노출 원칙
+
+1. **Public API만 노출**: 다른 계층/Slice에서 사용할 것만
+2. **내부 구현 숨김**: lib/, internal utilities는 노출하지 않음  
+3. **타입 안전성**: 필요한 TypeScript 타입과 인터페이스 노출
+4. **명확한 진입점**: 각 Slice의 명확한 API 제공
+
+#### 🚫 잘못된 노출 패턴
+
+```tsx
+// ❌ BAD - 모든 것을 노출
+export * from './ui';
+export * from './model'; 
+export * from './api';
+export * from './lib';
+
+// ❌ BAD - 내부 구현 노출
+export { validateTodoInternal } from './lib/validation';
+export { INTERNAL_CONSTANTS } from './lib/constants';
+```
 
 ### 🔧 도구 활용
 
@@ -338,13 +464,105 @@ shared  → (아무것도 import 금지) ❌
 -   **Tailwind**: 미리 정의된 Toss 색상만
 -   **TypeScript**: 모든 컴포넌트 인터페이스 필수
 
+### 🔄 재사용성 기반 개발 워크플로우
+
+**CRITICAL**: 개발하면서 재사용 가능한 친구들을 추출하는 방식 추천
+
+#### 🚀 개발 단계별 추출 전략
+
+**1단계: 빠른 프로토타이핑**
+```tsx
+// ✅ 처음에는 한 파일에서 빠르게 개발
+const TodoPage = () => {
+    // 모든 로직을 여기서 구현
+    const [todos, setTodos] = useState([]);
+    const handleAdd = () => { /* 로직 */ };
+    
+    return (
+        <div className="p-4 bg-white rounded-lg">
+            {/* UI 구현 */}
+        </div>
+    );
+};
+```
+
+**2단계: 패턴 감지 및 추출**
+```tsx
+// 🔍 같은 패턴이 2-3번 반복되면 즉시 추출
+// UI 패턴이 중복되면 → shared/ui로
+// 비즈니스 로직이 중복되면 → features로  
+// 도메인 모델이 중복되면 → entities로
+```
+
+**3단계: 계층별 분리**
+```tsx
+// entities/todo/ - 도메인 모델
+export interface TodoEntity {
+    id: string;
+    title: string;
+    completed: boolean;
+}
+
+// features/todo-management/ - 비즈니스 로직
+export const useTodoSlice = create(...);
+
+// widgets/todo-list/ - 복합 UI 블록
+export const TodoListWidget = () => {
+    const { todos } = useTodoSlice();
+    return <div>{/* 위젯 구현 */}</div>;
+};
+
+// pages/todo/ - 최종 조합
+export const TodoPage = () => {
+    return <TodoListWidget />;
+};
+```
+
+#### 📈 추출 시점 판단 기준
+
+**즉시 추출해야 하는 경우:**
+- [ ] 같은 UI 패턴이 3곳 이상에서 반복
+- [ ] 동일한 비즈니스 로직이 2곳 이상에서 사용  
+- [ ] 비슷한 상태 관리 코드가 여러 컴포넌트에 존재
+- [ ] 100줄 이상의 컴포넌트 파일
+
+**추출 우선순위:**
+1. **shared/ui** - 가장 범용적인 UI 컴포넌트
+2. **entities** - 핵심 도메인 모델과 타입
+3. **features** - 재사용되는 비즈니스 기능  
+4. **widgets** - 복합 UI 블록
+
+#### 🔧 실용적 리팩토링 가이드
+
+**Small Change (라인 수정)**
+```tsx
+// 즉시 적용 - 승인 없이 진행
+const theme = 'bg-toss-blue/10'; // 색상 통일
+```
+
+**Medium Change (컴포넌트 추출)**
+```tsx
+// 간단한 계획 → 즉시 실행
+// 1. shared/ui/Card.tsx 생성
+// 2. 기존 3곳에서 사용 중인 카드 패턴 교체
+```
+
+**Large Change (아키텍처 변경)**
+```tsx
+// 계획 수립 → 설명 → 승인 요청 → 실행
+// 1. entities/user 추출 계획
+// 2. 7개 파일에 걸친 사용자 로직 정리
+// 3. features/user-auth로 비즈니스 로직 이동
+```
+
 ## 🎯 핵심 원칙
 
-1. **재사용성 우선**: 같은 패턴이 보이면 즉시 공통화
-2. **계층 분리**: 각 계층의 역할을 명확히 구분
-3. **타입 안전성**: 모든 props와 상태는 타입 정의
-4. **디자인 일관성**: Toss 디자인 시스템 엄격 준수
-5. **성능 최적화**: RSC 우선, 'use client' 최소화
+1. **점진적 추출**: 빠른 개발 → 패턴 감지 → 단계적 리팩토링
+2. **재사용성 우선**: 같은 패턴이 보이면 즉시 공통화
+3. **계층 분리**: 각 계층의 역할을 명확히 구분
+4. **타입 안전성**: 모든 props와 상태는 타입 정의
+5. **디자인 일관성**: Toss 디자인 시스템 엄격 준수
+6. **성능 최적화**: RSC 우선, 'use client' 최소화
 
 ### 🚀 점진적 FSD 도입 가이드
 
