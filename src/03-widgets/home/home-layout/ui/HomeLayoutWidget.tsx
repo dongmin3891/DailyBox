@@ -19,7 +19,7 @@ export interface HomeLayoutWidgetProps {
 const HomeLayoutWidget: React.FC<HomeLayoutWidgetProps> = ({ userName, className = '' }) => {
     return (
         <main className={`min-h-screen bg-toss-blue-light/30 px-5 py-6 ${className}`}>
-            <div className="max-w-sm mx-auto">
+            <div className="max-w-sm mx-auto space-y-4">
                 {/* 앱 헤더 */}
                 <AppHeader />
 
@@ -30,7 +30,7 @@ const HomeLayoutWidget: React.FC<HomeLayoutWidgetProps> = ({ userName, className
                 <FeaturesGridWidget />
 
                 {/* 하단 여백 */}
-                <div className="h-6" />
+                <div className="h-8" />
             </div>
         </main>
     );

@@ -6,7 +6,8 @@
 'use client';
 
 import React from 'react';
-import { FeatureCard } from '@/shared/ui';
+import Link from 'next/link';
+import { Card } from '@/shared/ui';
 
 export interface FeatureItem {
     /** 기능 아이콘 */
@@ -82,6 +83,22 @@ const defaultFeatures: FeatureItem[] = [
         href: '/fortune',
         enabled: false,
     },
+    {
+        icon: '🎨',
+        title: '디자인 시스템',
+        description: 'UI 컴포넌트 가이드',
+        theme: 'secondary',
+        href: '/design-system',
+        enabled: true,
+    },
+    {
+        icon: '🌈',
+        title: '컬러 가이드',
+        description: 'Toss 색상 시스템',
+        theme: 'warning',
+        href: '/colors',
+        enabled: true,
+    },
 ];
 
 /**
@@ -91,23 +108,61 @@ const handleComingSoon = (title: string) => {
     alert(`${title} 기능은 준비 중입니다! 🚧`);
 };
 
+/**
+ * 개별 기능 카드 컴포넌트
+ */
+const FeatureItem: React.FC<{ feature: FeatureItem }> = ({ feature }) => {
+    const themeColors = {
+        blue: 'bg-toss-blue/10 border-toss-blue/25',
+        success: 'bg-semantic-success/15 border-semantic-success/30',
+        warning: 'bg-semantic-warning/15 border-semantic-warning/30',
+        secondary: 'bg-toss-blue-light/40 border-toss-blue/20',
+    } as const;
+
+    const cardContent = (
+        <Card
+            variant="outlined"
+            padding="md"
+            clickable={true}
+            hoverable={true}
+            onClick={!feature.enabled ? () => handleComingSoon(feature.title) : undefined}
+            className={`${themeColors[feature.theme]} border-2 min-h-[120px] flex flex-col justify-center`}
+        >
+            <div className="text-center">
+                <div className="text-4xl mb-3" aria-hidden="true">
+                    {feature.icon}
+                </div>
+                <h3 className="text-neutral-gray-700 font-semibold mb-1 text-sm">{feature.title}</h3>
+                <p className="text-neutral-gray-500 text-xs">{feature.description}</p>
+            </div>
+        </Card>
+    );
+
+    // 활성화된 기능은 Link로 감싸기
+    if (feature.enabled && feature.href) {
+        return (
+            <Link
+                href={feature.href}
+                className="focus:outline-none focus:ring-2 focus:ring-toss-blue focus:ring-opacity-50 rounded-2xl"
+                aria-label={`${feature.title} 페이지로 이동: ${feature.description}`}
+            >
+                {cardContent}
+            </Link>
+        );
+    }
+
+    return cardContent;
+};
+
 const FeaturesGridWidget: React.FC<FeaturesGridWidgetProps> = ({ features = defaultFeatures, className = '' }) => {
     return (
-        <div className={`bg-bg-primary rounded-2xl p-5 shadow-sm ${className}`}>
-            <div className="grid grid-cols-2 gap-3">
+        <Card variant="elevated" padding="md" className={className}>
+            <div className="grid grid-cols-2 gap-3 max-h-[600px] overflow-y-auto">
                 {features.map((feature, index) => (
-                    <FeatureCard
-                        key={index}
-                        icon={feature.icon}
-                        title={feature.title}
-                        description={feature.description}
-                        theme={feature.theme}
-                        href={feature.enabled ? feature.href : undefined}
-                        onClick={!feature.enabled ? () => handleComingSoon(feature.title) : undefined}
-                    />
+                    <FeatureItem key={`${feature.title}-${index}`} feature={feature} />
                 ))}
             </div>
-        </div>
+        </Card>
     );
 };
 
