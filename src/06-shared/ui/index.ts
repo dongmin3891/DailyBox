@@ -16,6 +16,7 @@ export { default as Badge } from './Badge';
 export { default as IconButton } from './IconButton';
 export { default as Divider } from './Divider';
 export { default as UIShowcase } from './UIShowcase';
+export { default as BottomNavigationBar } from './BottomNavigationBar';
 
 // Types도 함께 export
 export type { FeatureCardProps } from './FeatureCard';

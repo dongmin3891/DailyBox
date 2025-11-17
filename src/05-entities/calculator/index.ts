@@ -4,8 +4,12 @@
  */
 
 // UI Components
-export { default as Calculator } from './ui/Calculator';
-export { default as CalculatorHistory } from './ui/CalculatorHistory';
+export { Calculator, default as CalculatorDefault } from './ui/Calculator';
+export { CalculatorHistory, default as CalculatorHistoryDefault } from './ui/CalculatorHistory';
+
+// Component Props Types
+export type { CalculatorProps } from './ui/Calculator';
+export type { CalculatorHistoryProps } from './ui/CalculatorHistory';
 
 // Types
 export type * from './model/types';

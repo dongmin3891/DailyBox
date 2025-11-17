@@ -7,6 +7,7 @@
 
 import React from 'react';
 import StoreProvider from './StoreProvider';
+import { BottomNavigationBar } from '@/shared/ui';
 
 interface AppProviderProps {
     children: React.ReactNode;
@@ -19,6 +20,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
             {/* <ThemeProvider> */}
             {/* <ErrorBoundary> */}
             {children}
+            <BottomNavigationBar />
         </StoreProvider>
     );
 };

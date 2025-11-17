@@ -1,1 +1,1 @@
-export {}; // TODO: Add public API when features are implemented
+export { useMenuSlice } from './model/menu.slice';

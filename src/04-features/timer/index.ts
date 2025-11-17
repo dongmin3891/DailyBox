@@ -1,1 +1,1 @@
-export {}; // TODO: Add public API when features are implemented
+export { useTimerSlice } from './model/timer.slice';

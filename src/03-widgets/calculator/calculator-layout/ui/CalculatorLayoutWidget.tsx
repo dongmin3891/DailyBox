@@ -12,10 +12,15 @@ import { CalculatorHeaderWidget } from '@/widgets/calculator';
 export interface CalculatorLayoutWidgetProps {
     /** 추가 클래스명 */
     className?: string;
+    /** 초기 기록 표시 상태 */
+    initialShowHistory?: boolean;
 }
 
-const CalculatorLayoutWidget: React.FC<CalculatorLayoutWidgetProps> = ({ className = '' }) => {
-    const [showHistory, setShowHistory] = useState(false);
+const CalculatorLayoutWidget: React.FC<CalculatorLayoutWidgetProps> = ({
+    className = '',
+    initialShowHistory = false,
+}) => {
+    const [showHistory, setShowHistory] = useState(initialShowHistory);
 
     const toggleHistory = () => {
         setShowHistory(!showHistory);
@@ -58,11 +63,6 @@ const CalculatorLayoutWidget: React.FC<CalculatorLayoutWidgetProps> = ({ classNa
                     )}
                 </div>
             </main>
-
-            {/* 키보드 단축키 안내 (하단) */}
-            <div className="fixed bottom-5 left-1/2 transform -translate-x-1/2 bg-text-primary text-bg-primary px-3 py-1 rounded-lg text-xs opacity-60 pointer-events-none">
-                <kbd className="font-mono">Ctrl+H</kbd> 기록 • <kbd className="font-mono">ESC</kbd> 닫기
-            </div>
         </div>
     );
 };

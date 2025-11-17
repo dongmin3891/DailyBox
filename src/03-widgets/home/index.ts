@@ -6,3 +6,5 @@
 export { default as GreetingWidget } from './greeting/ui/GreetingWidget';
 export { default as FeaturesGridWidget } from './features-grid/ui/FeaturesGridWidget';
 export { default as HomeLayoutWidget } from './home-layout/ui/HomeLayoutWidget';
+export { HomeSummaryWidget } from './home-summary';
+export type { HomeSummaryWidgetProps } from './home-summary';

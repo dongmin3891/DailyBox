@@ -1,16 +1,66 @@
+/**
+ * Calculator Component (Entities Layer)
+ *
+ * 계산기 엔티티의 핵심 UI 컴포넌트입니다.
+ * FSD 아키텍처의 Entities Layer에 위치하며, 순수한 계산기 도메인 로직과 UI를 담당합니다.
+ *
+ * @description
+ * - 기본 사칙연산 (+, -, ×, ÷) 지원
+ * - 키보드 입력 지원 (숫자, 연산자, Enter, ESC, Backspace)
+ * - 계산 기록 자동 저장 (Zustand store 연동)
+ * - Toss 디자인 시스템 색상과 컴포넌트 사용
+ * - 접근성 고려 (ARIA 레이블, 키보드 네비게이션)
+ *
+ * @example
+ * ```tsx
+ * // widgets나 pages에서 사용
+ * import { Calculator } from '@/entities/calculator';
+ *
+ * const CalculatorWidget = () => {
+ *   return (
+ *     <div className="calculator-container">
+ *       <Calculator className="custom-calculator" />
+ *     </div>
+ *   );
+ * };
+ * ```
+ *
+ * @see {@link useCalcSlice} - 계산기 상태 관리 훅
+ * @see {@link CalcHistory} - 계산 기록 타입
+ */
+
 'use client';
 
 import React, { useState } from 'react';
 import { useCalcSlice } from '@/features/calculator/model/calc.slice';
 import { CalcHistory } from '../model/types';
+import { Button, Card } from '@/shared/ui';
 
-interface CalculatorProps {
+export interface CalculatorProps {
+    /** 추가 클래스명 */
     className?: string;
+    /** 초기 표시 값 (기본값: "0") */
+    initialValue?: string;
+    /** 키보드 입력 비활성화 여부 (기본값: false) */
+    disableKeyboard?: boolean;
+    /** 계산 완료 시 콜백 함수 */
+    onCalculationComplete?: (result: string, expression: string) => void;
 }
 
-const Calculator: React.FC<CalculatorProps> = ({ className = '' }) => {
+/**
+ * Calculator - 계산기 컴포넌트
+ *
+ * @param props - CalculatorProps
+ * @returns JSX.Element
+ */
+const Calculator: React.FC<CalculatorProps> = ({
+    className = '',
+    initialValue = '0',
+    disableKeyboard = false,
+    onCalculationComplete,
+}) => {
     const { addToHistory, setCurrentCalculation } = useCalcSlice();
-    const [display, setDisplay] = useState('0');
+    const [display, setDisplay] = useState(initialValue);
     const [expression, setExpression] = useState('');
     const [previousValue, setPreviousValue] = useState<number | null>(null);
     const [operation, setOperation] = useState<string | null>(null);
@@ -85,6 +135,9 @@ const Calculator: React.FC<CalculatorProps> = ({ className = '' }) => {
             setPreviousValue(null);
             setOperation(null);
             setWaitingForOperand(true);
+
+            // 계산 완료 콜백 호출
+            onCalculationComplete?.(String(newValue), `${fullExpression} =`);
         }
     };
 
@@ -110,8 +163,10 @@ const Calculator: React.FC<CalculatorProps> = ({ className = '' }) => {
         setDisplay(String(-value));
     };
 
-    // 키보드 지원 추가
+    // 키보드 지원 추가 (조건부)
     React.useEffect(() => {
+        if (disableKeyboard) return;
+
         const handleKeyDown = (e: KeyboardEvent) => {
             // 숫자 키
             if (/[0-9]/.test(e.key)) {
@@ -160,166 +215,120 @@ const Calculator: React.FC<CalculatorProps> = ({ className = '' }) => {
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [display]);
+    }, [display, disableKeyboard]);
 
     return (
-        <div className={`bg-bg-primary rounded-2xl shadow-lg overflow-hidden ${className}`}>
+        <Card variant="elevated" padding="lg" rounded="2xl" className={`overflow-hidden ${className}`}>
             {/* 계산기 디스플레이 */}
-            <div className="bg-bg-primary border border-neutral-gray-200 rounded-2xl p-6 mb-6">
-                <div className="text-right">
-                    <div className="text-text-secondary text-base mb-2 min-h-6" aria-label="계산 과정">
+            <Card variant="default" padding="lg" rounded="2xl" className="mb-6">
+                <div className="text-right min-w-0">
+                    <div className="text-text-secondary text-base mb-2 min-h-6 break-words" aria-label="계산 과정">
                         {expression || '\u00A0'}
                     </div>
                     <div
-                        className="text-text-primary text-4xl font-bold leading-tight"
+                        className="text-text-primary text-4xl font-bold leading-tight break-all"
+                        style={{ wordBreak: 'break-all', overflowWrap: 'anywhere' }}
                         aria-label={`현재 값: ${display}`}
                         aria-live="polite"
                     >
                         {display}
                     </div>
                 </div>
-            </div>
+            </Card>
 
             {/* 계산기 버튼 */}
             <div className="p-4 space-y-4">
                 {/* 첫 번째 행: C, ±, %, ÷ */}
                 <div className="grid grid-cols-4 gap-4">
-                    <button
-                        onClick={clear}
-                        className="bg-neutral-gray-100 text-text-secondary w-16 h-16 rounded-2xl text-2xl font-semibold hover:opacity-80 transition-opacity active:scale-95 focus:outline-none focus:ring-2 focus:ring-toss-blue focus:ring-opacity-50"
-                        aria-label="모두 지우기 (ESC)"
-                    >
+                    <Button onClick={clear} variant="neutral" size="calculator" aria-label="모두 지우기 (ESC)">
                         C
-                    </button>
-                    <button
-                        onClick={toggleSign}
-                        className="bg-neutral-gray-100 text-text-secondary w-16 h-16 rounded-2xl text-2xl font-semibold hover:opacity-80 transition-opacity active:scale-95"
-                    >
+                    </Button>
+                    <Button onClick={toggleSign} variant="neutral" size="calculator" aria-label="부호 변경">
                         ±
-                    </button>
-                    <button
-                        onClick={inputPercent}
-                        className="bg-neutral-gray-100 text-text-secondary w-16 h-16 rounded-2xl text-2xl font-semibold hover:opacity-80 transition-opacity active:scale-95"
-                    >
+                    </Button>
+                    <Button onClick={inputPercent} variant="neutral" size="calculator" aria-label="백분율">
                         %
-                    </button>
-                    <button
-                        onClick={() => inputOperation('÷')}
-                        className="bg-toss-blue text-white w-16 h-16 rounded-2xl text-2xl font-semibold hover:opacity-90 transition-opacity active:scale-95"
-                    >
+                    </Button>
+                    <Button onClick={() => inputOperation('÷')} variant="primary" size="calculator" aria-label="나누기">
                         ÷
-                    </button>
+                    </Button>
                 </div>
 
                 {/* 두 번째 행: 7, 8, 9, × */}
                 <div className="grid grid-cols-4 gap-4">
-                    <button
-                        onClick={() => inputNumber('7')}
-                        className="bg-neutral-gray-100 text-text-primary w-16 h-16 rounded-2xl text-2xl font-semibold hover:opacity-80 transition-opacity active:scale-95"
-                    >
+                    <Button onClick={() => inputNumber('7')} variant="neutral" size="calculator" aria-label="7">
                         7
-                    </button>
-                    <button
-                        onClick={() => inputNumber('8')}
-                        className="bg-neutral-gray-100 text-text-primary w-16 h-16 rounded-2xl text-2xl font-semibold hover:opacity-80 transition-opacity active:scale-95"
-                    >
+                    </Button>
+                    <Button onClick={() => inputNumber('8')} variant="neutral" size="calculator" aria-label="8">
                         8
-                    </button>
-                    <button
-                        onClick={() => inputNumber('9')}
-                        className="bg-neutral-gray-100 text-text-primary w-16 h-16 rounded-2xl text-2xl font-semibold hover:opacity-80 transition-opacity active:scale-95"
-                    >
+                    </Button>
+                    <Button onClick={() => inputNumber('9')} variant="neutral" size="calculator" aria-label="9">
                         9
-                    </button>
-                    <button
-                        onClick={() => inputOperation('×')}
-                        className="bg-toss-blue text-white w-16 h-16 rounded-2xl text-2xl font-semibold hover:opacity-90 transition-opacity active:scale-95"
-                    >
+                    </Button>
+                    <Button onClick={() => inputOperation('×')} variant="primary" size="calculator" aria-label="곱하기">
                         ×
-                    </button>
+                    </Button>
                 </div>
 
                 {/* 세 번째 행: 4, 5, 6, - */}
                 <div className="grid grid-cols-4 gap-4">
-                    <button
-                        onClick={() => inputNumber('4')}
-                        className="bg-neutral-gray-100 text-text-primary w-16 h-16 rounded-2xl text-2xl font-semibold hover:opacity-80 transition-opacity active:scale-95"
-                    >
+                    <Button onClick={() => inputNumber('4')} variant="neutral" size="calculator" aria-label="4">
                         4
-                    </button>
-                    <button
-                        onClick={() => inputNumber('5')}
-                        className="bg-neutral-gray-100 text-text-primary w-16 h-16 rounded-2xl text-2xl font-semibold hover:opacity-80 transition-opacity active:scale-95"
-                    >
+                    </Button>
+                    <Button onClick={() => inputNumber('5')} variant="neutral" size="calculator" aria-label="5">
                         5
-                    </button>
-                    <button
-                        onClick={() => inputNumber('6')}
-                        className="bg-neutral-gray-100 text-text-primary w-16 h-16 rounded-2xl text-2xl font-semibold hover:opacity-80 transition-opacity active:scale-95"
-                    >
+                    </Button>
+                    <Button onClick={() => inputNumber('6')} variant="neutral" size="calculator" aria-label="6">
                         6
-                    </button>
-                    <button
-                        onClick={() => inputOperation('-')}
-                        className="bg-toss-blue text-white w-16 h-16 rounded-2xl text-2xl font-semibold hover:opacity-90 transition-opacity active:scale-95"
-                    >
+                    </Button>
+                    <Button onClick={() => inputOperation('-')} variant="primary" size="calculator" aria-label="빼기">
                         -
-                    </button>
+                    </Button>
                 </div>
 
                 {/* 네 번째 행: 1, 2, 3, + */}
                 <div className="grid grid-cols-4 gap-4">
-                    <button
-                        onClick={() => inputNumber('1')}
-                        className="bg-neutral-gray-100 text-text-primary w-16 h-16 rounded-2xl text-2xl font-semibold hover:opacity-80 transition-opacity active:scale-95"
-                    >
+                    <Button onClick={() => inputNumber('1')} variant="neutral" size="calculator" aria-label="1">
                         1
-                    </button>
-                    <button
-                        onClick={() => inputNumber('2')}
-                        className="bg-neutral-gray-100 text-text-primary w-16 h-16 rounded-2xl text-2xl font-semibold hover:opacity-80 transition-opacity active:scale-95"
-                    >
+                    </Button>
+                    <Button onClick={() => inputNumber('2')} variant="neutral" size="calculator" aria-label="2">
                         2
-                    </button>
-                    <button
-                        onClick={() => inputNumber('3')}
-                        className="bg-neutral-gray-100 text-text-primary w-16 h-16 rounded-2xl text-2xl font-semibold hover:opacity-80 transition-opacity active:scale-95"
-                    >
+                    </Button>
+                    <Button onClick={() => inputNumber('3')} variant="neutral" size="calculator" aria-label="3">
                         3
-                    </button>
-                    <button
-                        onClick={() => inputOperation('+')}
-                        className="bg-toss-blue text-white w-16 h-16 rounded-2xl text-2xl font-semibold hover:opacity-90 transition-opacity active:scale-95"
-                    >
+                    </Button>
+                    <Button onClick={() => inputOperation('+')} variant="primary" size="calculator" aria-label="더하기">
                         +
-                    </button>
+                    </Button>
                 </div>
 
                 {/* 다섯 번째 행: 0, ., = */}
                 <div className="grid grid-cols-4 gap-4">
-                    <button
+                    <Button
                         onClick={() => inputNumber('0')}
-                        className="bg-neutral-gray-100 text-text-primary col-span-2 h-16 rounded-2xl text-2xl font-semibold hover:opacity-80 transition-opacity active:scale-95"
+                        variant="neutral"
+                        size="calculator"
+                        className="col-span-2"
+                        aria-label="0"
                     >
                         0
-                    </button>
-                    <button
-                        onClick={() => inputNumber('.')}
-                        className="bg-neutral-gray-100 text-text-primary w-16 h-16 rounded-2xl text-2xl font-semibold hover:opacity-80 transition-opacity active:scale-95"
-                    >
+                    </Button>
+                    <Button onClick={() => inputNumber('.')} variant="neutral" size="calculator" aria-label="소수점">
                         .
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                         onClick={performCalculation}
-                        className="bg-toss-blue text-white w-16 h-16 rounded-2xl text-2xl font-semibold hover:opacity-90 transition-opacity active:scale-95 focus:outline-none focus:ring-2 focus:ring-toss-blue focus:ring-opacity-50"
+                        variant="primary"
+                        size="calculator"
                         aria-label="계산 실행 (Enter)"
                     >
                         =
-                    </button>
+                    </Button>
                 </div>
             </div>
-        </div>
+        </Card>
     );
 };
 
+export { Calculator };
 export default Calculator;

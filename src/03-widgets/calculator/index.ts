@@ -5,3 +5,7 @@
 
 export { default as CalculatorHeaderWidget } from './calculator-header/ui/CalculatorHeaderWidget';
 export { default as CalculatorLayoutWidget } from './calculator-layout/ui/CalculatorLayoutWidget';
+
+// Types
+export type { CalculatorHeaderWidgetProps } from './calculator-header/ui/CalculatorHeaderWidget';
+export type { CalculatorLayoutWidgetProps } from './calculator-layout/ui/CalculatorLayoutWidget';

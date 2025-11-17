@@ -25,7 +25,7 @@ const CalculatorHeaderWidget: React.FC<CalculatorHeaderWidgetProps> = ({
     const router = useRouter();
 
     const handleBack = () => {
-        router.back();
+        router.push('/');
     };
 
     const handleCopyResult = () => {

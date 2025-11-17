@@ -41,7 +41,7 @@ const defaultFeatures: FeatureItem[] = [
         description: '빠른 메모 작성',
         theme: 'secondary',
         href: '/memo',
-        enabled: false,
+        enabled: true,
     },
     {
         icon: '✅',
@@ -49,7 +49,7 @@ const defaultFeatures: FeatureItem[] = [
         description: '할 일 관리',
         theme: 'success',
         href: '/todo',
-        enabled: false,
+        enabled: true,
     },
     {
         icon: '⏰',
@@ -57,7 +57,7 @@ const defaultFeatures: FeatureItem[] = [
         description: '시간 관리',
         theme: 'warning',
         href: '/timer',
-        enabled: false,
+        enabled: true,
     },
     {
         icon: '🔢',
@@ -73,7 +73,7 @@ const defaultFeatures: FeatureItem[] = [
         description: '오늘 뭐 먹지?',
         theme: 'warning',
         href: '/menu',
-        enabled: false,
+        enabled: true,
     },
     {
         icon: '🔮',

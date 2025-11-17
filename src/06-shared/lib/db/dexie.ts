@@ -12,6 +12,7 @@ export type DbTodo = {
     id?: number;
     title: string;
     isDone: boolean;
+    priority: 'high' | 'medium' | 'low';
     createdAt: number;
     updatedAt: number;
 };

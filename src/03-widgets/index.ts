@@ -8,3 +8,6 @@ export * from './home';
 
 // Calculator Widgets
 export * from './calculator';
+
+// Memo Widgets
+export * from './memo';
