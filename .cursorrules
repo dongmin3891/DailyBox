@@ -714,12 +714,12 @@ function Component({ data }) {
 
 #### 📋 React Compiler 적용 체크리스트
 
-- [ ] `babel-plugin-react-compiler` 설치 확인
-- [ ] `babel.config.js` 설정 확인
 - [ ] Next.js `experimental.reactCompiler` 활성화 확인
 - [ ] 빌드 시 컴파일러 경고 확인
 - [ ] 성능 테스트 및 검증
 - [ ] 기존 수동 최적화 코드 점진적 제거 검토
+
+**참고**: Next.js 15.5.2는 React Compiler를 내장 지원하므로 Babel 설정 없이 `experimental.reactCompiler: true`만으로 사용 가능합니다.
 
 #### 💡 성능 모니터링
 
