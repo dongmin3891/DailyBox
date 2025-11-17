@@ -464,6 +464,270 @@ export { INTERNAL_CONSTANTS } from './lib/constants';
 -   **Tailwind**: 미리 정의된 Toss 색상만
 -   **TypeScript**: 모든 컴포넌트 인터페이스 필수
 
+### ⚛️ React 19.2 훅 사용 규칙
+
+**CRITICAL**: React 19.2 버전에서 새로 추가된 훅들을 적극 활용해야 합니다.
+
+#### 🆕 React 19.2 새로운 훅 목록
+
+1. **`useEffectEvent`** - 이벤트 핸들러와 이펙트 분리
+2. **`useActionState`** - 폼 액션 상태 관리 (이전 `useFormState` 대체)
+3. **`useOptimistic`** - 낙관적 업데이트
+4. **`useFormStatus`** - 폼 제출 상태 추적
+5. **`use`** - Promise/Context 처리 개선
+
+#### 📋 훅별 사용 가이드
+
+**1. `useEffectEvent` - 이벤트 핸들러와 이펙트 분리**
+
+```tsx
+// ✅ PREFERRED - useEffectEvent 사용
+function ChatRoom({ roomId, theme }) {
+  const onConnected = useEffectEvent(() => {
+    showNotification('Connected!', theme);
+  });
+
+  useEffect(() => {
+    const connection = createConnection(serverUrl, roomId);
+    connection.on('connected', () => {
+      onConnected();
+    });
+    return () => connection.disconnect();
+  }, [roomId]); // theme은 의존성 배열에서 제외 가능
+}
+
+// ❌ AVOID - 기존 방식 (의존성 배열 복잡)
+useEffect(() => {
+  const connection = createConnection(serverUrl, roomId);
+  connection.on('connected', () => {
+    showNotification('Connected!', theme);
+  });
+  return () => connection.disconnect();
+}, [roomId, theme]); // theme 변경 시 불필요한 재연결
+```
+
+**2. `useActionState` - 폼 액션 상태 관리**
+
+```tsx
+// ✅ PREFERRED - useActionState 사용
+function AddTodoForm() {
+  const [state, formAction, isPending] = useActionState(async (prevState, formData) => {
+    const title = formData.get('title');
+    if (!title) {
+      return { error: '제목을 입력해주세요' };
+    }
+    await addTodo({ title });
+    return { success: true };
+  }, { error: null });
+
+  return (
+    <form action={formAction}>
+      <input name="title" />
+      {state.error && <p>{state.error}</p>}
+      <button disabled={isPending}>추가</button>
+    </form>
+  );
+}
+
+// ❌ AVOID - 기존 useState + form 제출 방식
+const [error, setError] = useState(null);
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  // 복잡한 상태 관리...
+};
+```
+
+**3. `useOptimistic` - 낙관적 업데이트**
+
+```tsx
+// ✅ PREFERRED - useOptimistic 사용
+function TodoList({ todos }) {
+  const [optimisticTodos, addOptimisticTodo] = useOptimistic(
+    todos,
+    (state, newTodo) => [...state, { ...newTodo, id: 'temp' }]
+  );
+
+  const handleAdd = async (todo) => {
+    addOptimisticTodo(todo); // 즉시 UI 업데이트
+    await addTodo(todo); // 서버 동기화
+  };
+
+  return <div>{/* optimisticTodos 렌더링 */}</div>;
+}
+
+// ❌ AVOID - 수동 낙관적 업데이트
+const [todos, setTodos] = useState([]);
+const handleAdd = async (todo) => {
+  setTodos([...todos, todo]); // 수동 관리
+  try {
+    await addTodo(todo);
+  } catch {
+    setTodos(todos); // 롤백 로직 필요
+  }
+};
+```
+
+**4. `useFormStatus` - 폼 제출 상태**
+
+```tsx
+// ✅ PREFERRED - useFormStatus 사용
+function SubmitButton() {
+  const { pending } = useFormStatus();
+  return <button disabled={pending}>{pending ? '제출 중...' : '제출'}</button>;
+}
+
+function Form() {
+  return (
+    <form action={formAction}>
+      <input name="title" />
+      <SubmitButton />
+    </form>
+  );
+}
+
+// ❌ AVOID - props로 pending 상태 전달
+function SubmitButton({ pending }) {
+  return <button disabled={pending}>제출</button>;
+}
+```
+
+**5. `use` - Promise/Context 처리**
+
+```tsx
+// ✅ PREFERRED - use 훅 사용
+function UserProfile({ userId }) {
+  const userPromise = fetchUser(userId);
+  const user = use(userPromise); // Promise 직접 처리
+  
+  return <div>{user.name}</div>;
+}
+
+// ✅ PREFERRED - use로 Context 처리
+function ThemeDisplay() {
+  const theme = use(ThemeContext); // Context 직접 사용
+  return <div>{theme}</div>;
+}
+
+// ❌ AVOID - useEffect로 Promise 처리
+const [user, setUser] = useState(null);
+useEffect(() => {
+  fetchUser(userId).then(setUser);
+}, [userId]);
+```
+
+#### 🎯 사용 우선순위
+
+1. **폼 처리**: `useActionState`, `useFormStatus` 우선 사용
+2. **이벤트 핸들러**: `useEffectEvent`로 의존성 배열 단순화
+3. **낙관적 업데이트**: `useOptimistic`으로 UX 개선
+4. **비동기 처리**: `use` 훅으로 Promise/Context 처리
+
+#### ⚠️ 주의사항
+
+- React 19.2 이상에서만 사용 가능
+- 기존 코드와의 호환성 고려
+- 점진적 마이그레이션 권장
+
+### ⚡ React Compiler v1.0 사용 규칙
+
+**CRITICAL**: React Compiler v1.0이 프로젝트에 적용되어 있습니다. 자동으로 최적화되므로 수동 메모이제이션을 최소화해야 합니다.
+
+#### 🎯 React Compiler의 역할
+
+React Compiler는 빌드 시점에 자동으로 다음을 수행합니다:
+- 컴포넌트 자동 메모이제이션 (`React.memo` 자동 적용)
+- 훅 자동 메모이제이션 (`useMemo`, `useCallback` 자동 적용)
+- 불필요한 리렌더링 방지
+- 의존성 배열 자동 최적화
+
+#### ✅ React Compiler 사용 시 권장 사항
+
+**1. 수동 메모이제이션 제거**
+
+```tsx
+// ❌ AVOID - React Compiler가 자동으로 처리하므로 불필요
+const MemoizedComponent = React.memo(({ data }) => {
+  return <div>{data}</div>;
+});
+
+const memoizedValue = useMemo(() => computeExpensiveValue(a, b), [a, b]);
+const memoizedCallback = useCallback(() => doSomething(a, b), [a, b]);
+
+// ✅ PREFERRED - 간단하게 작성, Compiler가 자동 최적화
+const Component = ({ data }) => {
+  return <div>{data}</div>;
+};
+
+const value = computeExpensiveValue(a, b);
+const callback = () => doSomething(a, b);
+```
+
+**2. 컴포넌트 작성 시 주의사항**
+
+```tsx
+// ✅ PREFERRED - 순수 함수로 작성
+function TodoItem({ todo, onToggle }) {
+  return (
+    <div onClick={() => onToggle(todo.id)}>
+      {todo.title}
+    </div>
+  );
+}
+
+// ⚠️ 주의 - 외부 상태 변경은 명시적으로
+function Counter() {
+  const [count, setCount] = useState(0);
+  
+  // ✅ 좋음 - 명시적인 상태 업데이트
+  const increment = () => setCount(c => c + 1);
+  
+  // ⚠️ 주의 - 사이드 이펙트는 useEffect 사용
+  useEffect(() => {
+    document.title = `Count: ${count}`;
+  }, [count]);
+}
+```
+
+**3. 기존 최적화 코드 검토**
+
+- 기존 `React.memo`, `useMemo`, `useCallback`은 유지 가능하지만 불필요할 수 있음
+- Compiler가 더 효율적으로 최적화할 수 있으므로 점진적으로 제거 검토
+- 성능 문제가 발생하는 경우에만 수동 최적화 유지
+
+#### 🚫 React Compiler와 충돌 가능한 패턴
+
+```tsx
+// ⚠️ 주의 - 컴파일러가 이해하기 어려운 패턴
+function Component({ data }) {
+  // 외부 변수 직접 참조 (의존성 추적 어려움)
+  const result = externalFunction(data);
+  
+  // 동적 함수 생성 (최적화 어려움)
+  const handler = new Function('return ' + code)();
+  
+  // 반복문 내부에서 상태 변경 (의존성 추적 어려움)
+  items.forEach(item => {
+    setState(prev => [...prev, item]);
+  });
+}
+```
+
+#### 📋 React Compiler 적용 체크리스트
+
+- [ ] `babel-plugin-react-compiler` 설치 확인
+- [ ] `babel.config.js` 설정 확인
+- [ ] Next.js `experimental.reactCompiler` 활성화 확인
+- [ ] 빌드 시 컴파일러 경고 확인
+- [ ] 성능 테스트 및 검증
+- [ ] 기존 수동 최적화 코드 점진적 제거 검토
+
+#### 💡 성능 모니터링
+
+React Compiler 적용 후:
+- 개발자 도구의 React Profiler로 리렌더링 확인
+- 불필요한 리렌더링이 감소했는지 확인
+- 빌드 시간이 증가했는지 모니터링
+
 ### 🔄 재사용성 기반 개발 워크플로우
 
 **CRITICAL**: 개발하면서 재사용 가능한 친구들을 추출하는 방식 추천
