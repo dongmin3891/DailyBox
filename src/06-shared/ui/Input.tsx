@@ -3,7 +3,7 @@
  * Toss 디자인 시스템을 따르는 재사용 가능한 입력 컴포넌트
  */
 
-import React, { forwardRef } from 'react';
+import React, { forwardRef, useId } from 'react';
 
 export interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size' | 'prefix'> {
     /** 입력 필드 라벨 */
@@ -70,7 +70,8 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
         { label, helperText, error, success, size = 'md', fullWidth = true, prefix, suffix, className = '', ...props },
         ref
     ) => {
-        const inputId = props.id || `input-${Math.random().toString(36).substr(2, 9)}`;
+        const generatedId = useId();
+        const inputId = props.id || generatedId;
 
         const inputClasses = [
             baseInputStyles,

@@ -18,6 +18,10 @@ export interface MemoListProps {
     onMemoClick?: (id: number) => void;
     /** 메모 삭제 핸들러 */
     onMemoDelete?: (id: number) => void;
+    /** 메모 고정 토글 핸들러 */
+    onMemoTogglePin?: (id: number) => void;
+    /** 메모 잠금 해제 핸들러 */
+    onMemoUnlock?: (id: number, pin: string) => Promise<boolean>;
     /** 로딩 상태 */
     isLoading?: boolean;
     /** 추가 CSS 클래스 */
@@ -29,6 +33,8 @@ const MemoList: React.FC<MemoListProps> = ({
     selectedMemoId,
     onMemoClick,
     onMemoDelete,
+    onMemoTogglePin,
+    onMemoUnlock,
     isLoading = false,
     className = '',
 }) => {
@@ -72,6 +78,8 @@ const MemoList: React.FC<MemoListProps> = ({
                     isSelected={selectedMemoId === memo.id}
                     onClick={() => onMemoClick?.(memo.id)}
                     onDelete={() => onMemoDelete?.(memo.id)}
+                    onTogglePin={() => onMemoTogglePin?.(memo.id)}
+                    onUnlock={onMemoUnlock ? (pin) => onMemoUnlock(memo.id, pin) : undefined}
                 />
             ))}
         </div>

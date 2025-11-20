@@ -12,18 +12,14 @@ import type { Menu } from '../model/types';
 
 export interface MenuRecommendProps {
     /** 추천된 메뉴 */
-    menu: Menu & { id: number } | null;
+    menu: (Menu & { id: number }) | null;
     /** 추천 중 여부 (애니메이션용) */
     isRecommending?: boolean;
     /** 추가 CSS 클래스 */
     className?: string;
 }
 
-const MenuRecommend: React.FC<MenuRecommendProps> = ({
-    menu,
-    isRecommending = false,
-    className = '',
-}) => {
+const MenuRecommend: React.FC<MenuRecommendProps> = ({ menu, isRecommending = false, className = '' }) => {
     const [showAnimation, setShowAnimation] = useState(false);
 
     useEffect(() => {
@@ -36,7 +32,7 @@ const MenuRecommend: React.FC<MenuRecommendProps> = ({
 
     if (!menu) {
         return (
-            <Card padding="xl" variant="default" className={`text-center ${className}`}>
+            <Card padding="lg" variant="default" className={`text-center ${className}`}>
                 <div className="flex flex-col items-center justify-center py-12">
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -61,7 +57,7 @@ const MenuRecommend: React.FC<MenuRecommendProps> = ({
 
     return (
         <div className={`${className} ${showAnimation ? 'animate-in zoom-in-95 duration-500' : ''}`}>
-            <Card padding="xl" variant="elevated" className="bg-gradient-to-br from-toss-blue/10 to-toss-blue-light/20">
+            <Card padding="lg" variant="elevated" className="bg-gradient-to-br from-toss-blue/10 to-toss-blue-light/20">
                 <div className="text-center mb-6">
                     <div className="inline-flex items-center justify-center w-16 h-16 bg-toss-blue rounded-full mb-4 animate-bounce">
                         <span className="text-3xl">🍽️</span>
@@ -77,4 +73,3 @@ const MenuRecommend: React.FC<MenuRecommendProps> = ({
 
 export { MenuRecommend };
 export default MenuRecommend;
-

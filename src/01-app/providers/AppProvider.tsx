@@ -5,22 +5,34 @@
 
 'use client';
 
-import React from 'react';
+import React, { useLayoutEffect } from 'react';
 import StoreProvider from './StoreProvider';
 import { BottomNavigationBar } from '@/shared/ui';
+import { useThemeSlice } from '@/shared/model/theme.slice';
 
 interface AppProviderProps {
     children: React.ReactNode;
 }
 
+const ThemeInitializer: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+    const { theme } = useThemeSlice();
+
+    useLayoutEffect(() => {
+        // 초기 테마 적용 (hydration 전에 실행)
+        document.documentElement.classList.remove('light', 'dark');
+        document.documentElement.classList.add(theme);
+    }, [theme]);
+
+    return <>{children}</>;
+};
+
 export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     return (
         <StoreProvider>
-            {/* 필요한 다른 Provider들 추가 가능 */}
-            {/* <ThemeProvider> */}
-            {/* <ErrorBoundary> */}
-            {children}
-            <BottomNavigationBar />
+            <ThemeInitializer>
+                {children}
+                <BottomNavigationBar />
+            </ThemeInitializer>
         </StoreProvider>
     );
 };

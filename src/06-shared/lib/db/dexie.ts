@@ -4,6 +4,11 @@ export type DbMemo = {
     id?: number;
     title: string;
     content: string;
+    tags?: string[];
+    isPinned?: boolean;
+    isArchived?: boolean;
+    isLocked?: boolean;
+    lockPin?: string;
     createdAt: number;
     updatedAt: number;
 };
@@ -56,7 +61,7 @@ export class DailyboxDb extends Dexie {
     constructor() {
         super('dailybox-db');
         this.version(1).stores({
-            memos: '++id, updatedAt, createdAt, title',
+            memos: '++id, updatedAt, createdAt, title, isPinned, isArchived, isLocked',
             todos: '++id, updatedAt, createdAt, isDone, title',
             timers: '++id, createdAt, label',
             menus: '++id, createdAt, name',
