@@ -8,8 +8,8 @@
 import React from 'react';
 import { Card } from '@/shared/ui';
 import { IconButton } from '@/shared/ui';
-import type { Todo, TodoPriority } from '../model/types';
-import { formatDate } from '@/shared/lib/utils/dateUtils';
+import type { Todo, TodoPriority, TodoCategory, TodoRepeat } from '../model/types';
+import { formatDate, formatSmartDate, getDateGroup } from '@/shared/lib/utils/dateUtils';
 
 const priorityColors: Record<TodoPriority, string> = {
     high: 'bg-semantic-error/20 border-semantic-error/50 text-semantic-error',
@@ -21,6 +21,24 @@ const priorityLabels: Record<TodoPriority, string> = {
     high: '높음',
     medium: '중간',
     low: '낮음',
+};
+
+const categoryColors: Record<TodoCategory, string> = {
+    work: 'bg-semantic-info/20 border-semantic-info/50 text-semantic-info',
+    home: 'bg-semantic-success/20 border-semantic-success/50 text-semantic-success',
+    personal: 'bg-toss-blue-light/20 border-toss-blue-light/50 text-toss-blue-light',
+};
+
+const categoryLabels: Record<TodoCategory, string> = {
+    work: '업무',
+    home: '집',
+    personal: '개인',
+};
+
+const repeatLabels: Record<TodoRepeat, string> = {
+    none: '',
+    daily: '매일',
+    weekly: '매주',
 };
 
 export interface TodoItemProps {
@@ -78,7 +96,7 @@ const TodoItem: React.FC<TodoItemProps> = ({ todo, onClick, onDelete, onToggle, 
 
                 {/* 내용 */}
                 <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <h3
                             className={`text-base font-medium ${
                                 todo.isDone ? 'text-text-tertiary line-through' : 'text-text-primary'
@@ -91,8 +109,40 @@ const TodoItem: React.FC<TodoItemProps> = ({ todo, onClick, onDelete, onToggle, 
                         >
                             {priorityLabels[todo.priority]}
                         </span>
+                        <span
+                            className={`px-2 py-0.5 text-xs font-medium rounded-full border ${categoryColors[todo.category]}`}
+                        >
+                            {categoryLabels[todo.category]}
+                        </span>
+                        {todo.repeat !== 'none' && (
+                            <span className="px-2 py-0.5 text-xs font-medium rounded-full border border-neutral-gray-300 bg-neutral-gray-100 text-text-secondary">
+                                🔁 {repeatLabels[todo.repeat]}
+                            </span>
+                        )}
                     </div>
-                    <p className="text-xs text-text-tertiary">{formatDate(todo.updatedAt)}</p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-xs text-text-tertiary">
+                            {formatDate(todo.updatedAt, {
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                            })}
+                        </p>
+                        {todo.dueDate && (
+                            <span
+                                className={`text-xs font-medium ${
+                                    todo.dueDate < Date.now() && !todo.isDone
+                                        ? 'text-semantic-error'
+                                        : getDateGroup(todo.dueDate) === 'today'
+                                          ? 'text-semantic-warning'
+                                          : 'text-text-secondary'
+                                }`}
+                            >
+                                📅 마감: {formatSmartDate(todo.dueDate)}
+                            </span>
+                        )}
+                    </div>
                 </div>
 
                 {/* 삭제 버튼 */}

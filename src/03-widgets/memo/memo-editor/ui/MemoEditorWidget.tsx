@@ -33,6 +33,8 @@ const MemoEditorWidget: React.FC<MemoEditorWidgetProps> = ({ memoId, className =
     const [lastSaved, setLastSaved] = useState<Date | null>(null);
     const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
     const createdMemoIdRef = useRef<number | null>(null);
+    const isInitialLoadRef = useRef(true); // 초기 로드 여부 추적
+    const previousValuesRef = useRef<{ title: string; content: string; tags: string[] } | null>(null);
     const { allTags, loadTags } = useMemoSlice();
 
     useEffect(() => {
@@ -42,21 +44,53 @@ const MemoEditorWidget: React.FC<MemoEditorWidgetProps> = ({ memoId, className =
 
     useEffect(() => {
         if (memo) {
+            // 초기 로드 시 이전 값 저장
+            previousValuesRef.current = {
+                title: memo.title,
+                content: memo.content,
+                tags: memo.tags || [],
+            };
             setTitle(memo.title);
             setContent(memo.content);
             setTags(memo.tags || []);
+            // 초기 로드 완료 플래그 설정 (다음 렌더링 사이클에서 해제)
+            isInitialLoadRef.current = true;
+            // 다음 렌더링 사이클에서 플래그 해제
+            setTimeout(() => {
+                isInitialLoadRef.current = false;
+            }, 0);
         } else {
             setTitle('');
             setContent('');
             setTags([]);
+            previousValuesRef.current = null;
+            isInitialLoadRef.current = true;
         }
     }, [memo]);
 
     // 자동 저장 로직
     useEffect(() => {
+        // 초기 로드 중이면 자동 저장하지 않음
+        if (isInitialLoadRef.current) {
+            return;
+        }
+
         // 새 메모이고 내용이 없으면 자동 저장하지 않음
         if (!memoId && !title.trim() && !content.trim()) {
             return;
+        }
+
+        // 기존 메모인 경우, 실제로 값이 변경되었는지 확인
+        if (memoId && previousValuesRef.current) {
+            const hasChanged =
+                title !== previousValuesRef.current.title ||
+                content !== previousValuesRef.current.content ||
+                JSON.stringify(tags) !== JSON.stringify(previousValuesRef.current.tags);
+
+            if (!hasChanged) {
+                // 값이 변경되지 않았으면 자동 저장하지 않음
+                return;
+            }
         }
 
         // 기존 타이머 클리어
@@ -77,6 +111,12 @@ const MemoEditorWidget: React.FC<MemoEditorWidgetProps> = ({ memoId, className =
                             content: content.trim(),
                             tags: tags,
                         });
+                        // 저장 후 이전 값 업데이트
+                        previousValuesRef.current = {
+                            title: title.trim() || '제목 없음',
+                            content: content.trim(),
+                            tags: tags,
+                        };
                     } else {
                         // 새 메모 생성
                         await addMemo({

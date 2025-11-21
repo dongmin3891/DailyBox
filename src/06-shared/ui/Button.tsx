@@ -38,10 +38,10 @@ const variantStyles = {
  * 크기별 스타일 매핑
  */
 const sizeStyles = {
-    sm: 'px-3 py-2 text-sm rounded-lg',
-    md: 'px-6 py-3 text-base rounded-lg',
-    lg: 'px-8 py-4 text-lg rounded-xl',
-    calculator: 'w-16 h-16 text-2xl rounded-2xl',
+    sm: 'px-3 py-2 text-sm rounded-lg min-h-[36px]',
+    md: 'px-6 py-3 text-base rounded-lg min-h-[44px]',
+    lg: 'px-6 py-4 text-lg rounded-xl min-h-[56px]',
+    calculator: 'w-16 h-16 text-2xl rounded-2xl min-h-[64px]',
 } as const;
 
 /**

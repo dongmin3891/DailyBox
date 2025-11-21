@@ -1,5 +1,5 @@
-import { db, DbCalcHistory } from '@/shared/lib/db/dexie';
-import type { Repository, Identifier } from '@/shared/lib/repository/base-repository';
+import { db, DbCalcHistory } from '@/06-shared/lib/db/dexie';
+import type { Repository, Identifier } from '@/06-shared/lib/repository/base-repository';
 
 export const calcHistoryRepository: Repository<DbCalcHistory> = {
     async add(entity) {

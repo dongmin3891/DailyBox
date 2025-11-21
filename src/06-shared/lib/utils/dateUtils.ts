@@ -95,3 +95,48 @@ export const formatSmartDate = (timestamp: number): string => {
         });
     }
 };
+
+/**
+ * 날짜를 그룹으로 분류합니다 (오늘, 내일, 이번 주)
+ * @param timestamp - 타임스탬프 (밀리초)
+ * @returns 그룹 이름 ('today' | 'tomorrow' | 'thisWeek' | 'later')
+ */
+export const getDateGroup = (timestamp: number): 'today' | 'tomorrow' | 'thisWeek' | 'later' => {
+    const date = new Date(timestamp);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    const nextWeek = new Date(today);
+    nextWeek.setDate(nextWeek.getDate() + 7);
+    
+    const dateOnly = new Date(date);
+    dateOnly.setHours(0, 0, 0, 0);
+    
+    if (dateOnly.getTime() === today.getTime()) {
+        return 'today';
+    } else if (dateOnly.getTime() === tomorrow.getTime()) {
+        return 'tomorrow';
+    } else if (dateOnly < nextWeek) {
+        return 'thisWeek';
+    } else {
+        return 'later';
+    }
+};
+
+/**
+ * 날짜 그룹의 라벨을 반환합니다
+ * @param group - 날짜 그룹
+ * @returns 그룹 라벨
+ */
+export const getDateGroupLabel = (group: 'today' | 'tomorrow' | 'thisWeek' | 'later'): string => {
+    const labels = {
+        today: '오늘',
+        tomorrow: '내일',
+        thisWeek: '이번 주',
+        later: '나중',
+    };
+    return labels[group];
+};

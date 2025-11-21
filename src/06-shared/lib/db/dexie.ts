@@ -18,6 +18,9 @@ export type DbTodo = {
     title: string;
     isDone: boolean;
     priority: 'high' | 'medium' | 'low';
+    category: 'work' | 'home' | 'personal';
+    dueDate?: number; // 마감일 (밀리초 타임스탬프)
+    repeat: 'none' | 'daily' | 'weekly';
     createdAt: number;
     updatedAt: number;
 };
@@ -48,6 +51,8 @@ export type DbCalcHistory = {
     expression: string;
     result: string;
     createdAt: number;
+    favorite?: boolean;
+    type?: 'normal' | 'settlement' | 'vat' | 'unit-conversion';
 };
 
 export class DailyboxDb extends Dexie {
@@ -66,7 +71,7 @@ export class DailyboxDb extends Dexie {
             timers: '++id, createdAt, label',
             menus: '++id, createdAt, name',
             fortunes: '++id, dateKey',
-            calcHistory: '++id, createdAt',
+            calcHistory: '++id, createdAt, favorite, type',
         });
     }
 }

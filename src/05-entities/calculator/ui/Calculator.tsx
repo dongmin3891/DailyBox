@@ -5,36 +5,24 @@
  * FSD 아키텍처의 Entities Layer에 위치하며, 순수한 계산기 도메인 로직과 UI를 담당합니다.
  *
  * @description
- * - 기본 사칙연산 (+, -, ×, ÷) 지원
- * - 키보드 입력 지원 (숫자, 연산자, Enter, ESC, Backspace)
- * - 계산 기록 자동 저장 (Zustand store 연동)
- * - Toss 디자인 시스템 색상과 컴포넌트 사용
- * - 접근성 고려 (ARIA 레이블, 키보드 네비게이션)
- *
- * @example
- * ```tsx
- * // widgets나 pages에서 사용
- * import { Calculator } from '@/entities/calculator';
- *
- * const CalculatorWidget = () => {
- *   return (
- *     <div className="calculator-container">
- *       <Calculator className="custom-calculator" />
- *     </div>
- *   );
- * };
- * ```
- *
- * @see {@link useCalcSlice} - 계산기 상태 관리 훅
- * @see {@link CalcHistory} - 계산 기록 타입
+ * - 연산 우선순위 처리 (괄호, *, / 우선순위)
+ * - 정산 모드 지원
+ * - 부가세 계산 (VAT 10%)
+ * - 단위 변환 (ml↔L, cm↔m, g↔kg)
+ * - 연속 계산 지원
+ * - 마지막 계산식 재편집
+ * - 모바일 UI 최적화
  */
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useCalcSlice } from '@/features/calculator/model/calc.slice';
-import { CalcHistory } from '../model/types';
-import { Button, Card } from '@/shared/ui';
+import { CalcHistory, CalcHistoryType } from '../model/types';
+import { evaluateExpression, isValidExpression } from '../lib/calcEngine';
+import { calculateVATIncluded, calculateVATExcluded, createVATExpression } from '../lib/vatCalculator';
+import { UNIT_CONVERSIONS, createUnitConversionExpression } from '../lib/unitConverter';
+import { Button, Card } from '@/06-shared/ui';
 
 export interface CalculatorProps {
     /** 추가 클래스명 */
@@ -49,9 +37,6 @@ export interface CalculatorProps {
 
 /**
  * Calculator - 계산기 컴포넌트
- *
- * @param props - CalculatorProps
- * @returns JSX.Element
  */
 const Calculator: React.FC<CalculatorProps> = ({
     className = '',
@@ -59,94 +44,242 @@ const Calculator: React.FC<CalculatorProps> = ({
     disableKeyboard = false,
     onCalculationComplete,
 }) => {
-    const { addToHistory, setCurrentCalculation } = useCalcSlice();
+    const {
+        addToHistory,
+        setCurrentCalculation,
+        currentExpression,
+        currentResult,
+        settlementMode,
+        settlementAmounts,
+        setSettlementMode,
+        addSettlementAmount,
+        clearSettlementAmounts,
+        loadHistory,
+    } = useCalcSlice();
+
     const [display, setDisplay] = useState(initialValue);
     const [expression, setExpression] = useState('');
-    const [previousValue, setPreviousValue] = useState<number | null>(null);
-    const [operation, setOperation] = useState<string | null>(null);
+    const [lastExpression, setLastExpression] = useState('');
     const [waitingForOperand, setWaitingForOperand] = useState(false);
+    const [isEditingExpression, setIsEditingExpression] = useState(false);
 
+    // currentExpression이 변경되면 수식 편집 모드로 전환
+    useEffect(() => {
+        if (currentExpression && currentExpression !== expression) {
+            setExpression(currentExpression);
+            setDisplay(currentResult);
+            setIsEditingExpression(true);
+            setWaitingForOperand(false);
+        }
+    }, [currentExpression, currentResult]);
+
+    // 정산 모드: 여러 금액 합산
+    const handleSettlementAdd = () => {
+        const amount = parseFloat(display);
+        if (!isNaN(amount)) {
+            addSettlementAmount(amount);
+            setDisplay('0');
+            setWaitingForOperand(true);
+        }
+    };
+
+    const handleSettlementSave = async () => {
+        if (settlementAmounts.length === 0) return;
+
+        const total = settlementAmounts.reduce((sum, amount) => sum + amount, 0);
+        const expression = settlementAmounts.join(' + ');
+        const fullExpression = `${expression} = ${total}`;
+
+        const historyItem: CalcHistory = {
+            expression: `정산: ${fullExpression}`,
+            result: String(total),
+            createdAt: Date.now(),
+            type: 'settlement',
+        };
+
+        await addToHistory(historyItem);
+        setCurrentCalculation(fullExpression, String(total));
+        setDisplay(String(total));
+        setExpression(fullExpression);
+        clearSettlementAmounts();
+        setSettlementMode(false);
+        setWaitingForOperand(true);
+        onCalculationComplete?.(String(total), fullExpression);
+    };
+
+    // 부가세 계산
+    const handleVATCalculation = async (type: 'included' | 'excluded') => {
+        const amount = parseFloat(display);
+        if (isNaN(amount) || amount <= 0) return;
+
+        let result: number;
+        let expressionText: string;
+
+        if (type === 'included') {
+            result = calculateVATIncluded(amount);
+            expressionText = createVATExpression(amount, 'included');
+        } else {
+            result = calculateVATExcluded(amount);
+            expressionText = createVATExpression(amount, 'excluded');
+        }
+
+        const historyItem: CalcHistory = {
+            expression: expressionText,
+            result: String(result.toFixed(0)),
+            createdAt: Date.now(),
+            type: 'vat',
+        };
+
+        await addToHistory(historyItem);
+        setCurrentCalculation(expressionText, String(result.toFixed(0)));
+        setDisplay(String(result.toFixed(0)));
+        setExpression(expressionText);
+        setWaitingForOperand(true);
+        onCalculationComplete?.(String(result.toFixed(0)), expressionText);
+    };
+
+    // 단위 변환
+    const handleUnitConversion = async (unitKey: string, reverse: boolean = false) => {
+        const value = parseFloat(display);
+        if (isNaN(value)) return;
+
+        const unitPair = UNIT_CONVERSIONS[unitKey];
+        if (!unitPair) return;
+
+        const expressionText = createUnitConversionExpression(value, unitPair, reverse);
+        const result = reverse ? unitPair.reverse(value) : unitPair.convert(value);
+
+        const historyItem: CalcHistory = {
+            expression: expressionText,
+            result: String(result),
+            createdAt: Date.now(),
+            type: 'unit-conversion',
+        };
+
+        await addToHistory(historyItem);
+        setCurrentCalculation(expressionText, String(result));
+        setDisplay(String(result));
+        setExpression(expressionText);
+        setWaitingForOperand(true);
+        onCalculationComplete?.(String(result), expressionText);
+    };
+
+    // 숫자 입력
     const inputNumber = (num: string) => {
         if (waitingForOperand) {
             setDisplay(num);
             setWaitingForOperand(false);
+            setIsEditingExpression(false);
         } else {
-            setDisplay(display === '0' ? num : display + num);
+            if (isEditingExpression) {
+                // 수식 편집 모드
+                setExpression(expression + num);
+                setDisplay(display === '0' ? num : display + num);
+            } else {
+                setDisplay(display === '0' ? num : display + num);
+            }
         }
     };
 
-    const inputOperation = (nextOperation: string) => {
-        const inputValue = parseFloat(display);
-
-        if (previousValue === null) {
-            setPreviousValue(inputValue);
-        } else if (operation) {
-            const currentValue = previousValue || 0;
-            const newValue = calculate(currentValue, inputValue, operation);
-
-            setDisplay(String(newValue));
-            setPreviousValue(newValue);
+    // 연산자 입력
+    const inputOperation = (op: string) => {
+        if (isEditingExpression) {
+            setExpression(expression + ` ${op} `);
+            setDisplay('0');
+            setWaitingForOperand(true);
+            return;
         }
 
+        const currentValue = display;
+        if (expression && !waitingForOperand) {
+            // 연속 계산: 현재 수식에 연산자 추가
+            setExpression(`${expression} ${op} `);
+        } else {
+            setExpression(`${currentValue} ${op} `);
+        }
         setWaitingForOperand(true);
-        setOperation(nextOperation);
-        setExpression(`${previousValue || inputValue} ${nextOperation}`);
+        setIsEditingExpression(true);
     };
 
-    const calculate = (firstValue: number, secondValue: number, operation: string): number => {
-        switch (operation) {
-            case '+':
-                return firstValue + secondValue;
-            case '-':
-                return firstValue - secondValue;
-            case '×':
-                return firstValue * secondValue;
-            case '÷':
-                return firstValue / secondValue;
-            case '=':
-                return secondValue;
-            default:
-                return secondValue;
+    // 괄호 입력
+    const inputParenthesis = (paren: '(' | ')') => {
+        if (waitingForOperand || display === '0') {
+            setExpression(paren);
+            setDisplay('0');
+            setWaitingForOperand(false);
+        } else {
+            setExpression(expression + paren);
         }
+        setIsEditingExpression(true);
     };
 
+    // 계산 실행
     const performCalculation = async () => {
-        const inputValue = parseFloat(display);
+        let expressionToEvaluate = expression.trim();
 
-        if (previousValue !== null && operation) {
-            const newValue = calculate(previousValue, inputValue, operation);
-            const fullExpression = `${previousValue} ${operation} ${inputValue}`;
+        // 수식 편집 모드가 아니면 현재 표시값을 사용
+        if (!isEditingExpression && expressionToEvaluate) {
+            // 마지막 연산자 뒤에 현재 값 추가
+            expressionToEvaluate = expressionToEvaluate + display;
+        } else if (!expressionToEvaluate) {
+            // 수식이 없으면 현재 표시값만
+            expressionToEvaluate = display;
+        }
 
-            // 계산 기록 저장
+        if (!isValidExpression(expressionToEvaluate)) {
+            alert('올바른 수식을 입력해주세요.');
+            return;
+        }
+
+        try {
+            const result = evaluateExpression(expressionToEvaluate);
+            const fullExpression = `${expressionToEvaluate} = ${result}`;
+
             const historyItem: CalcHistory = {
-                expression: fullExpression,
-                result: String(newValue),
+                expression: expressionToEvaluate,
+                result: String(result),
                 createdAt: Date.now(),
+                type: 'normal',
             };
 
-            // Zustand store를 통해 저장
             await addToHistory(historyItem);
-
-            // 현재 계산 상태 업데이트
-            setCurrentCalculation(`${fullExpression} =`, String(newValue));
-
-            setDisplay(String(newValue));
-            setExpression(`${fullExpression} =`);
-            setPreviousValue(null);
-            setOperation(null);
+            setCurrentCalculation(fullExpression, String(result));
+            setLastExpression(expressionToEvaluate);
+            setDisplay(String(result));
+            setExpression(fullExpression);
             setWaitingForOperand(true);
+            setIsEditingExpression(false);
+            onCalculationComplete?.(String(result), fullExpression);
+        } catch (error) {
+            alert(error instanceof Error ? error.message : '계산 오류가 발생했습니다.');
+        }
+    };
 
-            // 계산 완료 콜백 호출
-            onCalculationComplete?.(String(newValue), `${fullExpression} =`);
+    // 마지막 계산식 재편집
+    const loadLastExpression = () => {
+        if (lastExpression) {
+            setExpression(lastExpression);
+            setDisplay('0');
+            setWaitingForOperand(false);
+            setIsEditingExpression(true);
+        }
+    };
+
+    // 연속 계산 (직전 결과를 다음 계산에 사용)
+    const continueCalculation = () => {
+        if (currentResult && currentResult !== '0') {
+            setDisplay(currentResult);
+            setExpression('');
+            setWaitingForOperand(false);
+            setIsEditingExpression(false);
         }
     };
 
     const clear = () => {
         setDisplay('0');
         setExpression('');
-        setPreviousValue(null);
-        setOperation(null);
         setWaitingForOperand(false);
+        setIsEditingExpression(false);
     };
 
     const clearEntry = () => {
@@ -163,65 +296,71 @@ const Calculator: React.FC<CalculatorProps> = ({
         setDisplay(String(-value));
     };
 
-    // 키보드 지원 추가 (조건부)
-    React.useEffect(() => {
+    // 키보드 지원
+    useEffect(() => {
         if (disableKeyboard) return;
 
         const handleKeyDown = (e: KeyboardEvent) => {
-            // 숫자 키
             if (/[0-9]/.test(e.key)) {
                 e.preventDefault();
                 inputNumber(e.key);
-            }
-            // 연산자 키
-            else if (e.key === '+') {
+            } else if (e.key === '+') {
                 e.preventDefault();
                 inputOperation('+');
             } else if (e.key === '-') {
                 e.preventDefault();
                 inputOperation('-');
-            } else if (e.key === '*') {
+            } else if (e.key === '*' || e.key === '×') {
                 e.preventDefault();
                 inputOperation('×');
-            } else if (e.key === '/') {
+            } else if (e.key === '/' || e.key === '÷') {
                 e.preventDefault();
                 inputOperation('÷');
-            }
-            // 소수점
-            else if (e.key === '.') {
+            } else if (e.key === '.') {
                 e.preventDefault();
-                inputNumber('.');
-            }
-            // 계산 실행
-            else if (e.key === 'Enter' || e.key === '=') {
+                if (!display.includes('.')) {
+                    inputNumber('.');
+                }
+            } else if (e.key === 'Enter' || e.key === '=') {
                 e.preventDefault();
                 performCalculation();
-            }
-            // 초기화
-            else if (e.key === 'Escape' || e.key === 'c' || e.key === 'C') {
+            } else if (e.key === 'Escape' || e.key === 'c' || e.key === 'C') {
                 e.preventDefault();
                 clear();
-            }
-            // 백스페이스 (마지막 숫자 삭제)
-            else if (e.key === 'Backspace') {
+            } else if (e.key === 'Backspace') {
                 e.preventDefault();
                 if (display.length > 1) {
                     setDisplay(display.slice(0, -1));
                 } else {
                     setDisplay('0');
                 }
+            } else if (e.key === '(') {
+                e.preventDefault();
+                inputParenthesis('(');
+            } else if (e.key === ')') {
+                e.preventDefault();
+                inputParenthesis(')');
             }
         };
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [display, disableKeyboard]);
+    }, [display, expression, disableKeyboard, waitingForOperand, isEditingExpression]);
 
     return (
         <Card variant="elevated" padding="lg" rounded="2xl" className={`overflow-hidden ${className}`}>
             {/* 계산기 디스플레이 */}
-            <Card variant="default" padding="lg" rounded="2xl" className="mb-6">
+            <Card variant="default" padding="lg" rounded="2xl" className="mb-4">
                 <div className="text-right min-w-0">
+                    {/* 정산 모드 표시 */}
+                    {settlementMode && (
+                        <div className="text-toss-blue text-sm mb-2">
+                            정산 모드: {settlementAmounts.length}개 항목
+                            {settlementAmounts.length > 0 && (
+                                <span className="ml-2">({settlementAmounts.join(' + ')})</span>
+                            )}
+                        </div>
+                    )}
                     <div className="text-text-secondary text-base mb-2 min-h-6 break-words" aria-label="계산 과정">
                         {expression || '\u00A0'}
                     </div>
@@ -236,18 +375,40 @@ const Calculator: React.FC<CalculatorProps> = ({
                 </div>
             </Card>
 
+            {/* 모드 전환 버튼 */}
+            <div className="mb-4 flex gap-2 flex-wrap">
+                <Button
+                    onClick={() => setSettlementMode(!settlementMode)}
+                    variant={settlementMode ? 'primary' : 'neutral'}
+                    size="sm"
+                    className="text-xs"
+                >
+                    {settlementMode ? '정산 모드 ON' : '정산 모드'}
+                </Button>
+                {lastExpression && (
+                    <Button onClick={loadLastExpression} variant="neutral" size="sm" className="text-xs">
+                        마지막 식 불러오기
+                    </Button>
+                )}
+                {currentResult && currentResult !== '0' && (
+                    <Button onClick={continueCalculation} variant="neutral" size="sm" className="text-xs">
+                        연속 계산
+                    </Button>
+                )}
+            </div>
+
             {/* 계산기 버튼 */}
-            <div className="p-4 space-y-4">
-                {/* 첫 번째 행: C, ±, %, ÷ */}
-                <div className="grid grid-cols-4 gap-4">
+            <div className="space-y-2 sm:space-y-3">
+                {/* 첫 번째 행: C, CE, ±, %, ÷ */}
+                <div className="grid grid-cols-4 gap-2 sm:gap-3">
                     <Button onClick={clear} variant="neutral" size="calculator" aria-label="모두 지우기 (ESC)">
                         C
                     </Button>
+                    <Button onClick={clearEntry} variant="neutral" size="calculator" aria-label="현재 입력 지우기">
+                        CE
+                    </Button>
                     <Button onClick={toggleSign} variant="neutral" size="calculator" aria-label="부호 변경">
                         ±
-                    </Button>
-                    <Button onClick={inputPercent} variant="neutral" size="calculator" aria-label="백분율">
-                        %
                     </Button>
                     <Button onClick={() => inputOperation('÷')} variant="primary" size="calculator" aria-label="나누기">
                         ÷
@@ -255,7 +416,7 @@ const Calculator: React.FC<CalculatorProps> = ({
                 </div>
 
                 {/* 두 번째 행: 7, 8, 9, × */}
-                <div className="grid grid-cols-4 gap-4">
+                <div className="grid grid-cols-4 gap-2 sm:gap-3">
                     <Button onClick={() => inputNumber('7')} variant="neutral" size="calculator" aria-label="7">
                         7
                     </Button>
@@ -271,7 +432,7 @@ const Calculator: React.FC<CalculatorProps> = ({
                 </div>
 
                 {/* 세 번째 행: 4, 5, 6, - */}
-                <div className="grid grid-cols-4 gap-4">
+                <div className="grid grid-cols-4 gap-2 sm:gap-3">
                     <Button onClick={() => inputNumber('4')} variant="neutral" size="calculator" aria-label="4">
                         4
                     </Button>
@@ -287,7 +448,7 @@ const Calculator: React.FC<CalculatorProps> = ({
                 </div>
 
                 {/* 네 번째 행: 1, 2, 3, + */}
-                <div className="grid grid-cols-4 gap-4">
+                <div className="grid grid-cols-4 gap-2 sm:gap-3">
                     <Button onClick={() => inputNumber('1')} variant="neutral" size="calculator" aria-label="1">
                         1
                     </Button>
@@ -302,13 +463,21 @@ const Calculator: React.FC<CalculatorProps> = ({
                     </Button>
                 </div>
 
-                {/* 다섯 번째 행: 0, ., = */}
-                <div className="grid grid-cols-4 gap-4">
+                {/* 다섯 번째 행: (, 0, ., = */}
+                <div className="grid grid-cols-4 gap-2 sm:gap-3">
+                    <Button
+                        onClick={() => inputParenthesis('(')}
+                        variant="neutral"
+                        size="calculator"
+                        aria-label="여는 괄호"
+                    >
+                        (
+                    </Button>
                     <Button
                         onClick={() => inputNumber('0')}
                         variant="neutral"
                         size="calculator"
-                        className="col-span-2"
+                        className="col-span-1"
                         aria-label="0"
                     >
                         0
@@ -323,6 +492,77 @@ const Calculator: React.FC<CalculatorProps> = ({
                         aria-label="계산 실행 (Enter)"
                     >
                         =
+                    </Button>
+                </div>
+
+                {/* 여섯 번째 행: ), %, 부가세 버튼들 */}
+                <div className="grid grid-cols-4 gap-2 sm:gap-3">
+                    <Button
+                        onClick={() => inputParenthesis(')')}
+                        variant="neutral"
+                        size="calculator"
+                        aria-label="닫는 괄호"
+                    >
+                        )
+                    </Button>
+                    <Button onClick={inputPercent} variant="neutral" size="calculator" aria-label="백분율">
+                        %
+                    </Button>
+                    <Button
+                        onClick={() => handleVATCalculation('excluded')}
+                        variant="secondary"
+                        size="sm"
+                        className="text-xs"
+                    >
+                        부가세 제외
+                    </Button>
+                    <Button
+                        onClick={() => handleVATCalculation('included')}
+                        variant="secondary"
+                        size="sm"
+                        className="text-xs"
+                    >
+                        부가세 포함
+                    </Button>
+                </div>
+
+                {/* 정산 모드 버튼 */}
+                {settlementMode && (
+                    <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                        <Button onClick={handleSettlementAdd} variant="secondary" size="md">
+                            금액 추가
+                        </Button>
+                        <Button onClick={handleSettlementSave} variant="primary" size="md">
+                            정산 저장
+                        </Button>
+                    </div>
+                )}
+
+                {/* 단위 변환 버튼 */}
+                <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                    <Button
+                        onClick={() => handleUnitConversion('ml-l', false)}
+                        variant="secondary"
+                        size="sm"
+                        className="text-xs"
+                    >
+                        ml→L
+                    </Button>
+                    <Button
+                        onClick={() => handleUnitConversion('cm-m', false)}
+                        variant="secondary"
+                        size="sm"
+                        className="text-xs"
+                    >
+                        cm→m
+                    </Button>
+                    <Button
+                        onClick={() => handleUnitConversion('g-kg', false)}
+                        variant="secondary"
+                        size="sm"
+                        className="text-xs"
+                    >
+                        g→kg
                     </Button>
                 </div>
             </div>

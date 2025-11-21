@@ -12,6 +12,7 @@ import { useTodoSlice } from '@/features/todo';
 import { useTimerSlice } from '@/features/timer';
 import { useCalcSlice } from '@/features/calculator';
 import { useMenuSlice } from '@/features/menu';
+import { WeekStatsWidget } from '@/widgets/todo';
 import { Card } from '@/shared/ui';
 import { Badge } from '@/shared/ui';
 import { IconButton } from '@/shared/ui';
@@ -123,6 +124,9 @@ const SummaryDashboardWidget: React.FC<SummaryDashboardWidgetProps> = ({ classNa
             {/* 메인 컨텐츠 */}
             <main className="p-5">
                 <div className="max-w-4xl mx-auto space-y-6">
+                    {/* 이번 주 성취도 */}
+                    <WeekStatsWidget />
+
                     {/* 통계 카드 그리드 */}
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                         {summaryCards.map((card) => (

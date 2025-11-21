@@ -8,6 +8,7 @@
 import React, { useState, useEffect } from 'react';
 import { Calculator, CalculatorHistory } from '@/entities/calculator';
 import { CalculatorHeaderWidget } from '@/widgets/calculator';
+import { useCalcSlice } from '@/features/calculator/model/calc.slice';
 
 export interface CalculatorLayoutWidgetProps {
     /** 추가 클래스명 */
@@ -21,6 +22,7 @@ const CalculatorLayoutWidget: React.FC<CalculatorLayoutWidgetProps> = ({
     initialShowHistory = false,
 }) => {
     const [showHistory, setShowHistory] = useState(initialShowHistory);
+    const { setCurrentCalculation } = useCalcSlice();
 
     const toggleHistory = () => {
         setShowHistory(!showHistory);
@@ -45,20 +47,28 @@ const CalculatorLayoutWidget: React.FC<CalculatorLayoutWidgetProps> = ({
     }, [showHistory]);
 
     return (
-        <div className={`min-h-screen bg-bg-secondary ${className}`}>
+        <div className={`min-h-screen bg-bg-secondary flex flex-col ${className}`}>
             {/* 헤더 위젯 */}
             <CalculatorHeaderWidget showHistory={showHistory} onToggleHistory={toggleHistory} />
 
             {/* 메인 컨텐츠 */}
-            <main className="p-5">
-                <div className="max-w-md mx-auto space-y-5">
-                    {/* 계산기 */}
-                    <Calculator />
+            <main className="flex-1 overflow-hidden flex flex-col p-4 pb-6">
+                <div className="max-w-md mx-auto w-full flex flex-col flex-1 overflow-hidden space-y-4">
+                    {/* 계산기 (상단 고정) */}
+                    <div className="flex-shrink-0">
+                        <Calculator />
+                    </div>
 
-                    {/* 계산 기록 (조건부 렌더링) */}
+                    {/* 계산 기록 (아래 스크롤 영역) */}
                     {showHistory && (
-                        <div className="animate-in slide-in-from-top-2 duration-200">
-                            <CalculatorHistory />
+                        <div className="flex-1 overflow-hidden animate-in slide-in-from-top-2 duration-200">
+                            <CalculatorHistory
+                                className="h-full flex flex-col"
+                                onItemClick={(expression, result) => {
+                                    // 히스토리 항목 클릭 시 해당 수식을 불러옴
+                                    setCurrentCalculation(expression, result);
+                                }}
+                            />
                         </div>
                     )}
                 </div>

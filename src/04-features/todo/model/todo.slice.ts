@@ -28,12 +28,14 @@ export const useTodoSlice = create<TodoSlice>((set, get) => ({
         set({ isLoading: true });
         try {
             const items = await todoRepository.getAll();
-            // 기존 데이터 호환성: priority가 없으면 'medium'으로 설정
-            const todosWithPriority = items.map((item) => ({
+            // 기존 데이터 호환성: 누락된 필드에 기본값 설정
+            const todosWithDefaults = items.map((item) => ({
                 ...item,
                 priority: (item as any).priority || 'medium',
+                category: (item as any).category || 'personal',
+                repeat: (item as any).repeat || 'none',
             })) as TodoItem[];
-            set({ todos: todosWithPriority, isLoading: false });
+            set({ todos: todosWithDefaults, isLoading: false });
         } catch (error) {
             console.error('Failed to load todos:', error);
             set({ isLoading: false });
@@ -46,6 +48,8 @@ export const useTodoSlice = create<TodoSlice>((set, get) => ({
             const newTodo: Omit<TodoItem, 'id'> = {
                 ...todo,
                 priority: todo.priority || 'medium',
+                category: todo.category || 'personal',
+                repeat: todo.repeat || 'none',
                 createdAt: now,
                 updatedAt: now,
             };

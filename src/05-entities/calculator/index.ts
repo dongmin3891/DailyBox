@@ -16,3 +16,13 @@ export type * from './model/types';
 
 // Repository (for features layer)
 export { calcHistoryRepository } from './api/calc.repository';
+
+// Calculator Engine
+export { evaluateExpression, isValidExpression } from './lib/calcEngine';
+
+// VAT Calculator
+export { calculateVATIncluded, calculateVATExcluded, createVATExpression } from './lib/vatCalculator';
+
+// Unit Converter
+export { UNIT_CONVERSIONS, convertUnit, createUnitConversionExpression } from './lib/unitConverter';
+export type { UnitType, UnitPair } from './lib/unitConverter';

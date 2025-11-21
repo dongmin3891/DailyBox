@@ -38,8 +38,8 @@
 
 import React, { useEffect } from 'react';
 import { useCalcSlice } from '@/features/calculator/model/calc.slice';
-import { formatRelativeTime } from '@/shared/lib/utils/dateUtils';
-import { Card, IconButton } from '@/shared/ui';
+import { formatRelativeTime } from '@/06-shared/lib/utils/dateUtils';
+import { Card, IconButton, Input } from '@/06-shared/ui';
 
 export interface CalculatorHistoryProps {
     /** 추가 클래스명 */
@@ -54,6 +54,8 @@ export interface CalculatorHistoryProps {
     emptyMessage?: string;
     /** 기록 삭제 시 콜백 함수 */
     onHistoryCleared?: () => void;
+    /** 기록 항목 클릭 시 콜백 함수 (재편집용) */
+    onItemClick?: (expression: string, result: string) => void;
 }
 
 /**
@@ -69,8 +71,19 @@ const CalculatorHistory: React.FC<CalculatorHistoryProps> = ({
     clearConfirmMessage = '계산 기록을 모두 삭제하시겠습니까?',
     emptyMessage = '계산 기록이 없습니다',
     onHistoryCleared,
+    onItemClick,
 }) => {
-    const { history, isLoading, loadHistory, clearHistory } = useCalcSlice();
+    const {
+        history,
+        isLoading,
+        searchQuery,
+        loadHistory,
+        clearHistory,
+        removeFromHistory,
+        toggleFavorite,
+        setSearchQuery,
+        getFilteredHistory,
+    } = useCalcSlice();
 
     useEffect(() => {
         loadHistory();
@@ -78,13 +91,32 @@ const CalculatorHistory: React.FC<CalculatorHistoryProps> = ({
 
     const handleClearHistory = async () => {
         if (confirm(clearConfirmMessage)) {
-            await clearHistory();
-            onHistoryCleared?.();
+            try {
+                await clearHistory();
+                // 히스토리 삭제 후 다시 로드하여 UI 업데이트 보장
+                await loadHistory();
+                onHistoryCleared?.();
+            } catch (error) {
+                console.error('Failed to clear history:', error);
+                alert('기록 삭제 중 오류가 발생했습니다.');
+            }
         }
     };
 
-    // 최대 개수 제한 적용
-    const displayHistory = history.slice(0, maxItems);
+    const handleRemoveItem = async (id: number) => {
+        if (confirm('이 계산 기록을 삭제하시겠습니까?')) {
+            await removeFromHistory(id);
+        }
+    };
+
+    const handleToggleFavorite = async (id: number) => {
+        await toggleFavorite(id);
+    };
+
+    // 즐겨찾기와 일반 히스토리 분리
+    const filteredHistory = getFilteredHistory();
+    const favorites = filteredHistory.filter((item) => item.favorite).slice(0, maxItems);
+    const regularHistory = filteredHistory.filter((item) => !item.favorite).slice(0, maxItems);
 
     if (isLoading) {
         return (
@@ -96,7 +128,9 @@ const CalculatorHistory: React.FC<CalculatorHistoryProps> = ({
         );
     }
 
-    if (displayHistory.length === 0) {
+    const hasHistory = favorites.length > 0 || regularHistory.length > 0;
+
+    if (!hasHistory && !isLoading) {
         return (
             <div role="region" aria-label="계산 기록">
                 <Card variant="default" padding="lg" rounded="2xl" className={className}>
@@ -121,9 +155,9 @@ const CalculatorHistory: React.FC<CalculatorHistoryProps> = ({
     }
 
     return (
-        <div role="region" aria-label="계산 기록">
-            <Card variant="default" padding="lg" rounded="2xl" className={className}>
-                <div className="flex items-center justify-between mb-4">
+        <div role="region" aria-label="계산 기록" className={`flex flex-col h-full ${className}`}>
+            <Card variant="default" padding="lg" rounded="2xl" className="flex flex-col h-full overflow-hidden">
+                <div className="flex items-center justify-between mb-4 flex-shrink-0">
                     <h3 className="text-text-primary font-semibold text-lg flex items-center gap-2">
                         <span className="text-xl" aria-hidden="true">
                             🕐
@@ -139,31 +173,123 @@ const CalculatorHistory: React.FC<CalculatorHistoryProps> = ({
                     />
                 </div>
 
-                <div className="space-y-3 max-h-96 overflow-y-auto" role="list" aria-label="계산 기록 목록">
-                    {displayHistory.map((item) => (
-                        <div
-                            key={item.id}
-                            className="bg-bg-secondary rounded-lg p-4 border border-neutral-gray-200"
-                            role="listitem"
-                            aria-label={`계산: ${item.expression} = ${item.result}`}
-                        >
-                            <div className="flex justify-between items-start mb-2">
-                                <div className="flex-1">
-                                    <div className="text-text-secondary text-sm" aria-label="계산 표현식">
-                                        {item.expression}
-                                    </div>
-                                    <div className="text-text-primary font-semibold text-lg" aria-label="계산 결과">
-                                        = {item.result}
+                {/* 검색 입력 */}
+                <div className="mb-4 flex-shrink-0">
+                    <Input
+                        type="text"
+                        placeholder="검색..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full"
+                    />
+                </div>
+
+                {/* 스크롤 가능한 히스토리 영역 */}
+                <div className="flex-1 overflow-y-auto min-h-0">
+                    {/* 즐겨찾기 히스토리 (상단 고정) */}
+                    {favorites.length > 0 && (
+                        <div className="mb-4">
+                            <h4 className="text-text-secondary text-sm font-semibold mb-2 flex items-center gap-2 sticky top-0 bg-bg-primary py-1 z-10">
+                                <span>⭐</span>
+                                즐겨찾기
+                            </h4>
+                            <div className="space-y-2" role="list" aria-label="즐겨찾기 계산 기록">
+                            {favorites.map((item) => (
+                                <div
+                                    key={item.id}
+                                    className="bg-toss-blue-light/20 rounded-lg p-3 border border-toss-blue/30 cursor-pointer hover:bg-toss-blue-light/30 transition-colors"
+                                    role="listitem"
+                                    aria-label={`계산: ${item.expression} = ${item.result}`}
+                                    onClick={() => onItemClick?.(item.expression, item.result)}
+                                >
+                                    <div className="flex justify-between items-start">
+                                        <div className="flex-1 min-w-0">
+                                            <div className="text-text-secondary text-sm break-words" aria-label="계산 표현식">
+                                                {item.expression}
+                                            </div>
+                                            <div className="text-text-primary font-semibold text-base break-words" aria-label="계산 결과">
+                                                = {item.result}
+                                            </div>
+                                            {showTimestamps && (
+                                                <div className="text-text-tertiary text-xs mt-1" aria-label="계산 시간">
+                                                    {formatRelativeTime(item.createdAt)}
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="flex items-center gap-1 ml-2" onClick={(e) => e.stopPropagation()}>
+                                            <button
+                                                onClick={() => handleToggleFavorite(item.id!)}
+                                                className="text-toss-blue text-lg hover:scale-110 transition-transform"
+                                                aria-label="즐겨찾기 해제"
+                                            >
+                                                ⭐
+                                            </button>
+                                            <button
+                                                onClick={() => handleRemoveItem(item.id!)}
+                                                className="text-text-tertiary text-sm hover:text-text-primary transition-colors"
+                                                aria-label="삭제"
+                                            >
+                                                ✕
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                            {showTimestamps && (
-                                <div className="text-text-tertiary text-xs" aria-label="계산 시간">
-                                    {formatRelativeTime(item.createdAt)}
-                                </div>
-                            )}
+                            ))}
                         </div>
-                    ))}
+                    </div>
+                )}
+
+                    {/* 일반 히스토리 */}
+                    {regularHistory.length > 0 && (
+                        <div>
+                            {favorites.length > 0 && (
+                                <h4 className="text-text-secondary text-sm font-semibold mb-2">전체 기록</h4>
+                            )}
+                            <div className="space-y-2" role="list" aria-label="계산 기록 목록">
+                            {regularHistory.map((item) => (
+                                <div
+                                    key={item.id}
+                                    className="bg-bg-secondary rounded-lg p-3 border border-neutral-gray-200 cursor-pointer hover:bg-neutral-gray-50 transition-colors"
+                                    role="listitem"
+                                    aria-label={`계산: ${item.expression} = ${item.result}`}
+                                    onClick={() => onItemClick?.(item.expression, item.result)}
+                                >
+                                    <div className="flex justify-between items-start">
+                                        <div className="flex-1 min-w-0">
+                                            <div className="text-text-secondary text-sm break-words" aria-label="계산 표현식">
+                                                {item.expression}
+                                            </div>
+                                            <div className="text-text-primary font-semibold text-base break-words" aria-label="계산 결과">
+                                                = {item.result}
+                                            </div>
+                                            {showTimestamps && (
+                                                <div className="text-text-tertiary text-xs mt-1" aria-label="계산 시간">
+                                                    {formatRelativeTime(item.createdAt)}
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="flex items-center gap-1 ml-2" onClick={(e) => e.stopPropagation()}>
+                                            <button
+                                                onClick={() => handleToggleFavorite(item.id!)}
+                                                className="text-text-tertiary text-sm hover:text-toss-blue transition-colors"
+                                                aria-label="즐겨찾기 추가"
+                                            >
+                                                ⭐
+                                            </button>
+                                            <button
+                                                onClick={() => handleRemoveItem(item.id!)}
+                                                className="text-text-tertiary text-sm hover:text-text-primary transition-colors"
+                                                aria-label="삭제"
+                                            >
+                                                ✕
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
             </Card>
         </div>

@@ -5,12 +5,12 @@
 
 'use client';
 
-import React, { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useTodoSlice } from '@/features/todo';
 import { TodoEditor } from '@/entities/todo';
 import { IconButton } from '@/shared/ui';
-import type { TodoPriority } from '@/entities/todo/model/types';
+import type { TodoPriority, TodoCategory, TodoRepeat } from '@/entities/todo/model/types';
 
 export interface TodoEditorWidgetProps {
     /** 편집할 투두 ID (없으면 새 투두) */
@@ -21,14 +21,32 @@ export interface TodoEditorWidgetProps {
 
 const TodoEditorWidget: React.FC<TodoEditorWidgetProps> = ({ todoId, className = '' }) => {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const { todos, loadTodos, addTodo, updateTodo } = useTodoSlice();
     const todo = todoId ? todos.find((t) => t.id === todoId) : undefined;
+    
+    // URL 쿼리 파라미터에서 마감일 읽기
+    const dueDateFromUrl = searchParams.get('dueDate');
+    const [initialDueDate, setInitialDueDate] = useState<string | undefined>(undefined);
 
     useEffect(() => {
         loadTodos();
     }, [loadTodos]);
 
-    const handleSave = async (todoData: { title: string; priority: TodoPriority }) => {
+    useEffect(() => {
+        // URL에서 마감일이 있고, 기존 todo가 없으면 (새 할 일인 경우) 마감일 설정
+        if (dueDateFromUrl && !todoId) {
+            setInitialDueDate(dueDateFromUrl);
+        }
+    }, [dueDateFromUrl, todoId]);
+
+    const handleSave = async (todoData: {
+        title: string;
+        priority: TodoPriority;
+        category: TodoCategory;
+        dueDate?: number;
+        repeat: TodoRepeat;
+    }) => {
         if (todoId) {
             // 수정
             await updateTodo(todoId, todoData);
@@ -86,7 +104,12 @@ const TodoEditorWidget: React.FC<TodoEditorWidgetProps> = ({ todoId, className =
             {/* 메인 컨텐츠 */}
             <main className="p-5">
                 <div className="max-w-4xl mx-auto">
-                    <TodoEditor todo={todo} onSave={handleSave} onCancel={handleCancel} />
+                    <TodoEditor 
+                        todo={todo} 
+                        initialDueDate={initialDueDate}
+                        onSave={handleSave} 
+                        onCancel={handleCancel} 
+                    />
                 </div>
             </main>
         </div>
