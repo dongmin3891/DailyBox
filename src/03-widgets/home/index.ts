@@ -8,3 +8,7 @@ export { default as FeaturesGridWidget } from './features-grid/ui/FeaturesGridWi
 export { default as HomeLayoutWidget } from './home-layout/ui/HomeLayoutWidget';
 export { HomeSummaryWidget } from './home-summary';
 export type { HomeSummaryWidgetProps } from './home-summary';
+export { QuickSummaryWidget } from './quick-summary';
+export type { QuickSummaryWidgetProps } from './quick-summary';
+export { WeatherForecastWidget } from './weather-forecast';
+export type { WeatherForecastWidgetProps } from './weather-forecast';

@@ -140,3 +140,35 @@ export const getDateGroupLabel = (group: 'today' | 'tomorrow' | 'thisWeek' | 'la
     };
     return labels[group];
 };
+
+/**
+ * 오늘의 시작 시간(00:00:00)을 반환합니다
+ * @returns 오늘 시작 타임스탬프 (밀리초)
+ */
+export const getTodayStart = (): number => {
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    return now.getTime();
+};
+
+/**
+ * 오늘의 종료 시간(23:59:59.999)을 반환합니다
+ * @returns 오늘 종료 타임스탬프 (밀리초)
+ */
+export const getTodayEnd = (): number => {
+    const now = new Date();
+    now.setHours(23, 59, 59, 999);
+    return now.getTime();
+};
+
+/**
+ * 밀리초를 시간과 분으로 변환합니다
+ * @param ms - 밀리초
+ * @returns { hours: number, minutes: number }
+ */
+export const msToHoursMinutes = (ms: number): { hours: number; minutes: number } => {
+    const totalMinutes = Math.floor(ms / (1000 * 60));
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    return { hours, minutes };
+};

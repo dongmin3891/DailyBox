@@ -14,10 +14,10 @@ export interface AppHeaderProps {
 
 const AppHeader: React.FC<AppHeaderProps> = ({ icon = '🗂️', title = '일상함' }) => {
     return (
-        <header className="bg-bg-primary rounded-2xl px-5 py-4 mb-6 shadow-sm">
+        <header className="bg-bg-primary rounded-2xl px-4 py-4 mb-4 shadow-sm">
             <div className="flex items-center">
-                <div className="text-4xl mr-3">{icon}</div>
-                <h1 className="text-2xl font-bold text-neutral-gray-800">{title}</h1>
+                <div className="text-[28px] mr-3">{icon}</div>
+                <h1 className="text-[20px] font-bold text-neutral-gray-800">{title}</h1>
             </div>
         </header>
     );

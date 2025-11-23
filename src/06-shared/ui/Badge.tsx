@@ -16,6 +16,8 @@ export interface BadgeProps {
     dot?: boolean;
     /** 추가 CSS 클래스 */
     className?: string;
+    /** 클릭 핸들러 */
+    onClick?: () => void;
 }
 
 /**
@@ -62,7 +64,14 @@ const baseStyles = `
     .replace(/\s+/g, ' ')
     .trim();
 
-const Badge: React.FC<BadgeProps> = ({ children, variant = 'primary', size = 'md', dot = false, className = '' }) => {
+const Badge: React.FC<BadgeProps> = ({
+    children,
+    variant = 'primary',
+    size = 'md',
+    dot = false,
+    className = '',
+    onClick,
+}) => {
     if (dot) {
         const dotClasses = ['rounded-full', variantStyles[variant], dotSizeStyles[size], className]
             .filter(Boolean)
@@ -72,6 +81,18 @@ const Badge: React.FC<BadgeProps> = ({ children, variant = 'primary', size = 'md
     }
 
     const badgeClasses = [baseStyles, variantStyles[variant], sizeStyles[size], className].filter(Boolean).join(' ');
+
+    if (onClick) {
+        return (
+            <button
+                type="button"
+                onClick={onClick}
+                className={badgeClasses + ' cursor-pointer'}
+            >
+                {children}
+            </button>
+        );
+    }
 
     return <span className={badgeClasses}>{children}</span>;
 };

@@ -9,9 +9,11 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMenuSlice } from '@/features/menu';
 import { MenuRecommend, MenuList, MenuEditor, MenuCard } from '@/entities/menu';
+import type { MenuCategory, TimeOfDay } from '@/entities/menu/model/types';
 import { Button } from '@/shared/ui';
 import { Card } from '@/shared/ui';
 import { IconButton } from '@/shared/ui';
+import { MenuHistoryWidget, RecommendationRulesWidget } from '@/widgets/menu';
 
 export interface MenuPageWidgetProps {
     /** 추가 클래스명 */
@@ -19,19 +21,19 @@ export interface MenuPageWidgetProps {
 }
 
 // 기본 메뉴 데이터
-const defaultMenus = [
-    { name: '치킨', tags: ['치킨', '양념', '후라이드'] },
-    { name: '피자', tags: ['피자', '도우', '토핑'] },
-    { name: '햄버거', tags: ['햄버거', '패스트푸드'] },
-    { name: '파스타', tags: ['파스타', '이탈리안', '면'] },
-    { name: '초밥', tags: ['일식', '회', '초밥'] },
-    { name: '삼겹살', tags: ['고기', '구이', '한식'] },
-    { name: '김치찌개', tags: ['찌개', '한식', '매운맛'] },
-    { name: '라면', tags: ['라면', '간편식'] },
-    { name: '떡볶이', tags: ['분식', '매운맛'] },
-    { name: '짜장면', tags: ['중식', '면'] },
-    { name: '볶음밥', tags: ['중식', '밥'] },
-    { name: '돈까스', tags: ['일식', '튀김'] },
+const defaultMenus: Array<{ name: string; tags: string[]; category?: MenuCategory; timeOfDay?: TimeOfDay[] }> = [
+    { name: '치킨', tags: ['치킨', '양념', '후라이드'], category: 'korean', timeOfDay: ['dinner', 'snack'] },
+    { name: '피자', tags: ['피자', '도우', '토핑'], category: 'western', timeOfDay: ['dinner'] },
+    { name: '햄버거', tags: ['햄버거', '패스트푸드'], category: 'western', timeOfDay: ['lunch', 'dinner'] },
+    { name: '파스타', tags: ['파스타', '이탈리안', '면'], category: 'western', timeOfDay: ['lunch', 'dinner'] },
+    { name: '초밥', tags: ['일식', '회', '초밥'], category: 'japanese', timeOfDay: ['lunch', 'dinner'] },
+    { name: '삼겹살', tags: ['고기', '구이', '한식'], category: 'korean', timeOfDay: ['dinner'] },
+    { name: '김치찌개', tags: ['찌개', '한식', '매운맛'], category: 'korean', timeOfDay: ['lunch', 'dinner'] },
+    { name: '라면', tags: ['라면', '간편식'], category: 'snack', timeOfDay: ['snack'] },
+    { name: '떡볶이', tags: ['분식', '매운맛'], category: 'snack', timeOfDay: ['snack'] },
+    { name: '짜장면', tags: ['중식', '면'], category: 'chinese', timeOfDay: ['lunch', 'dinner'] },
+    { name: '볶음밥', tags: ['중식', '밥'], category: 'chinese', timeOfDay: ['lunch', 'dinner'] },
+    { name: '돈까스', tags: ['일식', '튀김'], category: 'japanese', timeOfDay: ['lunch', 'dinner'] },
 ];
 
 const MenuPageWidget: React.FC<MenuPageWidgetProps> = ({ className = '' }) => {
@@ -45,16 +47,21 @@ const MenuPageWidget: React.FC<MenuPageWidgetProps> = ({ className = '' }) => {
         addMenu,
         deleteMenu,
         recommendMenu,
+        recordMeal,
         clearRecommendation,
+        loadRecommendationRules,
     } = useMenuSlice();
     const [showEditor, setShowEditor] = useState(false);
     const [isRecommending, setIsRecommending] = useState(false);
     const [selectedTags, setSelectedTags] = useState<string[]>([]);
+    const [selectedCategory, setSelectedCategory] = useState<MenuCategory | undefined>(undefined);
+    const [selectedTimeOfDay, setSelectedTimeOfDay] = useState<TimeOfDay | undefined>(undefined);
     const hasInitializedRef = useRef(false);
 
     useEffect(() => {
         const initializeMenus = async () => {
             await loadMenus();
+            await loadRecommendationRules();
         };
         initializeMenus();
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -78,17 +85,57 @@ const MenuPageWidget: React.FC<MenuPageWidgetProps> = ({ className = '' }) => {
     // 모든 태그 추출
     const allTags = Array.from(new Set(menus.flatMap((menu) => menu.tags))).sort();
 
+    // 카테고리 옵션
+    const categoryOptions: Array<{ value: MenuCategory; label: string; icon: string }> = [
+        { value: 'korean', label: '한식', icon: '🍚' },
+        { value: 'chinese', label: '중식', icon: '🥢' },
+        { value: 'japanese', label: '일식', icon: '🍣' },
+        { value: 'western', label: '양식', icon: '🍝' },
+        { value: 'snack', label: '분식', icon: '🍢' },
+        { value: 'other', label: '기타', icon: '🍽️' },
+    ];
+
+    // 시간대 옵션
+    const timeOfDayOptions: Array<{ value: TimeOfDay; label: string; icon: string }> = [
+        { value: 'breakfast', label: '아침', icon: '🌅' },
+        { value: 'lunch', label: '점심', icon: '☀️' },
+        { value: 'dinner', label: '저녁', icon: '🌙' },
+        { value: 'snack', label: '야식', icon: '🌙' },
+    ];
+
+    // 현재 시간대 자동 감지 (22시 이후는 야식)
+    const getCurrentTimeOfDay = (): TimeOfDay | undefined => {
+        const hour = new Date().getHours();
+        if (hour >= 5 && hour < 10) return 'breakfast';
+        if (hour >= 10 && hour < 15) return 'lunch';
+        if (hour >= 15 && hour < 22) return 'dinner';
+        return 'snack'; // 22시 이후 ~ 5시 이전: 야식
+    };
+
     const handleRecommend = () => {
         // 필터링된 메뉴가 있는지 먼저 확인
         let filteredMenus = menus;
-        if (selectedTags.length > 0) {
-            filteredMenus = menus.filter((menu) =>
-                selectedTags.some((tag) => menu.tags.includes(tag))
+
+        // 카테고리 필터 적용
+        if (selectedCategory) {
+            filteredMenus = filteredMenus.filter((menu) => menu.category === selectedCategory);
+        }
+
+        // 시간대 필터 적용 (선택하지 않으면 현재 시간대 자동 적용)
+        const timeFilter = selectedTimeOfDay || getCurrentTimeOfDay();
+        if (timeFilter) {
+            filteredMenus = filteredMenus.filter(
+                (menu) => !menu.timeOfDay || menu.timeOfDay.length === 0 || menu.timeOfDay.includes(timeFilter)
             );
         }
 
+        // 태그 필터 적용
+        if (selectedTags.length > 0) {
+            filteredMenus = filteredMenus.filter((menu) => selectedTags.some((tag) => menu.tags.includes(tag)));
+        }
+
         if (filteredMenus.length === 0) {
-            alert('추천할 수 있는 메뉴가 없습니다. 태그를 선택하거나 메뉴를 추가해주세요.');
+            alert('추천할 수 있는 메뉴가 없습니다. 카테고리, 시간대, 태그를 선택하거나 메뉴를 추가해주세요.');
             return;
         }
 
@@ -97,12 +144,27 @@ const MenuPageWidget: React.FC<MenuPageWidgetProps> = ({ className = '' }) => {
 
         // 애니메이션을 위한 딜레이
         setTimeout(() => {
-            recommendMenu(selectedTags.length > 0 ? selectedTags : undefined);
+            recommendMenu(selectedTags.length > 0 ? selectedTags : undefined, selectedCategory, timeFilter);
             setIsRecommending(false);
         }, 300);
     };
 
-    const handleAddMenu = async (menu: { name: string; tags: string[] }) => {
+    // 추천된 메뉴를 식사 기록으로 저장
+    const handleRecordMeal = async () => {
+        if (!recommendedMenu) return;
+
+        const timeFilter = selectedTimeOfDay || getCurrentTimeOfDay();
+        await recordMeal(recommendedMenu.id, recommendedMenu.name, recommendedMenu.category, timeFilter);
+
+        alert(`"${recommendedMenu.name}" 식사 기록이 저장되었습니다!`);
+    };
+
+    const handleAddMenu = async (menu: {
+        name: string;
+        tags: string[];
+        category?: MenuCategory;
+        timeOfDay?: TimeOfDay[];
+    }) => {
         try {
             // 중복 메뉴 이름 체크
             const isDuplicate = menus.some((m) => m.name.toLowerCase() === menu.name.toLowerCase().trim());
@@ -148,9 +210,7 @@ const MenuPageWidget: React.FC<MenuPageWidgetProps> = ({ className = '' }) => {
     };
 
     const handleTagToggle = (tag: string) => {
-        setSelectedTags((prev) =>
-            prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
-        );
+        setSelectedTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
     };
 
     return (
@@ -168,7 +228,12 @@ const MenuPageWidget: React.FC<MenuPageWidgetProps> = ({ className = '' }) => {
                                     viewBox="0 0 24 24"
                                     stroke="currentColor"
                                 >
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M15 19l-7-7 7-7"
+                                    />
                                 </svg>
                             }
                             variant="ghost"
@@ -188,11 +253,89 @@ const MenuPageWidget: React.FC<MenuPageWidgetProps> = ({ className = '' }) => {
             <main className="p-5">
                 <div className="max-w-4xl mx-auto space-y-4">
                     {/* 추천 영역 */}
-                    <MenuRecommend menu={recommendedMenu} isRecommending={isRecommending} />
+                    <div className="space-y-3">
+                        <MenuRecommend menu={recommendedMenu} isRecommending={isRecommending} />
+                        {recommendedMenu && (
+                            <Button onClick={handleRecordMeal} variant="secondary" size="md" fullWidth>
+                                📝 이 메뉴로 식사 기록하기
+                            </Button>
+                        )}
+                    </div>
 
-                    {/* 추천 버튼 및 태그 필터 */}
+                    {/* 추천 버튼 및 필터 */}
                     <Card padding="md" variant="default">
                         <div className="space-y-4">
+                            {/* 카테고리 필터 */}
+                            <div>
+                                <label className="block text-sm font-medium text-text-secondary mb-2">
+                                    카테고리 선택 (선택사항)
+                                </label>
+                                <div className="grid grid-cols-3 gap-2">
+                                    {categoryOptions.map((option) => {
+                                        const isSelected = selectedCategory === option.value;
+                                        return (
+                                            <button
+                                                key={option.value}
+                                                onClick={() =>
+                                                    setSelectedCategory(isSelected ? undefined : option.value)
+                                                }
+                                                className={`
+                                                    flex flex-col items-center justify-center gap-1
+                                                    px-3 py-2 rounded-lg border-2 transition-all
+                                                    ${
+                                                        isSelected
+                                                            ? 'bg-toss-blue/10 border-toss-blue text-toss-blue'
+                                                            : 'bg-neutral-gray-50 border-neutral-gray-200 text-text-secondary hover:border-neutral-gray-300'
+                                                    }
+                                                `}
+                                            >
+                                                <span className="text-xl">{option.icon}</span>
+                                                <span className="text-xs font-medium">{option.label}</span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* 시간대 필터 */}
+                            <div>
+                                <label className="block text-sm font-medium text-text-secondary mb-2">
+                                    시간대 선택 (선택사항, 미선택 시 현재 시간대 자동 적용)
+                                </label>
+                                <div className="grid grid-cols-4 gap-2">
+                                    {timeOfDayOptions.map((option) => {
+                                        const isSelected = selectedTimeOfDay === option.value;
+                                        return (
+                                            <button
+                                                key={option.value}
+                                                onClick={() =>
+                                                    setSelectedTimeOfDay(isSelected ? undefined : option.value)
+                                                }
+                                                className={`
+                                                    flex flex-col items-center justify-center gap-1
+                                                    px-3 py-2 rounded-lg border-2 transition-all
+                                                    ${
+                                                        isSelected
+                                                            ? 'bg-semantic-success/15 border-semantic-success/30 text-semantic-success'
+                                                            : 'bg-neutral-gray-50 border-neutral-gray-200 text-text-secondary hover:border-neutral-gray-300'
+                                                    }
+                                                `}
+                                            >
+                                                <span className="text-xl">{option.icon}</span>
+                                                <span className="text-xs font-medium">{option.label}</span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                                {!selectedTimeOfDay && (
+                                    <p className="mt-1 text-xs text-text-tertiary">
+                                        현재 시간대:{' '}
+                                        {timeOfDayOptions.find((o) => o.value === getCurrentTimeOfDay())?.label ||
+                                            '야식'}
+                                    </p>
+                                )}
+                            </div>
+
                             {/* 태그 필터 */}
                             {allTags.length > 0 && (
                                 <div>
@@ -214,15 +357,21 @@ const MenuPageWidget: React.FC<MenuPageWidgetProps> = ({ className = '' }) => {
                                             </button>
                                         ))}
                                     </div>
-                                    {selectedTags.length > 0 && (
-                                        <button
-                                            onClick={() => setSelectedTags([])}
-                                            className="mt-2 text-xs text-text-tertiary hover:text-text-primary"
-                                        >
-                                            필터 초기화
-                                        </button>
-                                    )}
                                 </div>
+                            )}
+
+                            {/* 필터 초기화 */}
+                            {(selectedTags.length > 0 || selectedCategory || selectedTimeOfDay) && (
+                                <button
+                                    onClick={() => {
+                                        setSelectedTags([]);
+                                        setSelectedCategory(undefined);
+                                        setSelectedTimeOfDay(undefined);
+                                    }}
+                                    className="text-xs text-text-tertiary hover:text-text-primary"
+                                >
+                                    필터 초기화
+                                </button>
                             )}
 
                             {/* 추천 버튼 */}
@@ -239,17 +388,19 @@ const MenuPageWidget: React.FC<MenuPageWidgetProps> = ({ className = '' }) => {
                         </div>
                     </Card>
 
+                    {/* 식사 기록 히스토리 */}
+                    <MenuHistoryWidget maxItems={10} />
+
+                    {/* 추천 규칙 설정 */}
+                    <RecommendationRulesWidget />
+
                     {/* 최근 추천 기록 */}
                     {recentRecommendations.length > 0 && (
                         <Card padding="md" variant="default">
                             <h2 className="text-lg font-semibold text-text-primary mb-4">최근 추천</h2>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                 {recentRecommendations.map((menu) => (
-                                    <MenuCard
-                                        key={menu.id}
-                                        menu={menu}
-                                        onClick={() => recommendMenu(menu.tags)}
-                                    />
+                                    <MenuCard key={menu.id} menu={menu} onClick={() => recommendMenu(menu.tags)} />
                                 ))}
                             </div>
                         </Card>
@@ -270,43 +421,39 @@ const MenuPageWidget: React.FC<MenuPageWidgetProps> = ({ className = '' }) => {
                                     className="w-full max-w-2xl max-h-[90vh] pointer-events-auto animate-in zoom-in-95 duration-200"
                                     onClick={(e) => e.stopPropagation()}
                                 >
-                                    <Card
-                                        padding="lg"
-                                        variant="elevated"
-                                        className="overflow-y-auto"
-                                    >
-                                    <div className="flex items-center justify-between mb-6">
-                                        <h2 className="text-xl font-bold text-text-primary">메뉴 추가</h2>
-                                        <IconButton
-                                            icon={
-                                                <svg
-                                                    xmlns="http://www.w3.org/2000/svg"
-                                                    className="h-5 w-5"
-                                                    fill="none"
-                                                    viewBox="0 0 24 24"
-                                                    stroke="currentColor"
-                                                >
-                                                    <path
-                                                        strokeLinecap="round"
-                                                        strokeLinejoin="round"
-                                                        strokeWidth={2}
-                                                        d="M6 18L18 6M6 6l12 12"
-                                                    />
-                                                </svg>
-                                            }
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => setShowEditor(false)}
-                                            aria-label="닫기"
-                                        />
-                                    </div>
-                                    {showEditor && (
-                                        <MenuEditor
-                                            key="new-menu-editor"
-                                            onSave={handleAddMenu}
-                                            onCancel={() => setShowEditor(false)}
-                                        />
-                                    )}
+                                    <Card padding="lg" variant="elevated" className="overflow-y-auto">
+                                        <div className="flex items-center justify-between mb-6">
+                                            <h2 className="text-xl font-bold text-text-primary">메뉴 추가</h2>
+                                            <IconButton
+                                                icon={
+                                                    <svg
+                                                        xmlns="http://www.w3.org/2000/svg"
+                                                        className="h-5 w-5"
+                                                        fill="none"
+                                                        viewBox="0 0 24 24"
+                                                        stroke="currentColor"
+                                                    >
+                                                        <path
+                                                            strokeLinecap="round"
+                                                            strokeLinejoin="round"
+                                                            strokeWidth={2}
+                                                            d="M6 18L18 6M6 6l12 12"
+                                                        />
+                                                    </svg>
+                                                }
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => setShowEditor(false)}
+                                                aria-label="닫기"
+                                            />
+                                        </div>
+                                        {showEditor && (
+                                            <MenuEditor
+                                                key="new-menu-editor"
+                                                onSave={handleAddMenu}
+                                                onCancel={() => setShowEditor(false)}
+                                            />
+                                        )}
                                     </Card>
                                 </div>
                             </div>
@@ -334,4 +481,3 @@ const MenuPageWidget: React.FC<MenuPageWidgetProps> = ({ className = '' }) => {
 };
 
 export default MenuPageWidget;
-

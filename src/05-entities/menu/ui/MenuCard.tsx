@@ -8,7 +8,7 @@
 import React from 'react';
 import { Card } from '@/shared/ui';
 import { IconButton } from '@/shared/ui';
-import type { Menu } from '../model/types';
+import type { Menu, MenuCategory, TimeOfDay } from '../model/types';
 
 export interface MenuCardProps {
     /** 메뉴 데이터 */
@@ -23,19 +23,31 @@ export interface MenuCardProps {
     className?: string;
 }
 
-const MenuCard: React.FC<MenuCardProps> = ({
-    menu,
-    highlighted = false,
-    onClick,
-    onDelete,
-    className = '',
-}) => {
+const categoryLabels: Record<MenuCategory, { label: string; icon: string }> = {
+    korean: { label: '한식', icon: '🍚' },
+    chinese: { label: '중식', icon: '🥢' },
+    japanese: { label: '일식', icon: '🍣' },
+    western: { label: '양식', icon: '🍝' },
+    snack: { label: '분식', icon: '🍢' },
+    other: { label: '기타', icon: '🍽️' },
+};
+
+const timeOfDayLabels: Record<TimeOfDay, { label: string; icon: string }> = {
+    breakfast: { label: '아침', icon: '🌅' },
+    lunch: { label: '점심', icon: '☀️' },
+    dinner: { label: '저녁', icon: '🌙' },
+    snack: { label: '야식', icon: '🌙' },
+};
+
+const MenuCard: React.FC<MenuCardProps> = ({ menu, highlighted = false, onClick, onDelete, className = '' }) => {
     const handleDelete = (e: React.MouseEvent) => {
         e.stopPropagation();
         if (onDelete && confirm(`"${menu.name}" 메뉴를 삭제하시겠습니까?`)) {
             onDelete();
         }
     };
+
+    const categoryInfo = menu.category ? categoryLabels[menu.category] : null;
 
     return (
         <Card
@@ -48,7 +60,28 @@ const MenuCard: React.FC<MenuCardProps> = ({
         >
             <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
-                    <h3 className="text-xl font-bold text-text-primary mb-2">{menu.name}</h3>
+                    <div className="flex items-center gap-2 mb-2">
+                        <h3 className="text-xl font-bold text-text-primary">{menu.name}</h3>
+                        {categoryInfo && (
+                            <span className="text-sm text-text-secondary flex items-center gap-1">
+                                <span>{categoryInfo.icon}</span>
+                                <span>{categoryInfo.label}</span>
+                            </span>
+                        )}
+                    </div>
+                    {menu.timeOfDay && menu.timeOfDay.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mb-2">
+                            {menu.timeOfDay.map((time, index) => {
+                                const timeInfo = timeOfDayLabels[time];
+                                return (
+                                    <span key={index} className="text-xs text-text-tertiary flex items-center gap-1">
+                                        <span>{timeInfo.icon}</span>
+                                        <span>{timeInfo.label}</span>
+                                    </span>
+                                );
+                            })}
+                        </div>
+                    )}
                     {menu.tags.length > 0 && (
                         <div className="flex flex-wrap gap-2">
                             {menu.tags.map((tag, index) => (
@@ -93,5 +126,3 @@ const MenuCard: React.FC<MenuCardProps> = ({
 
 export { MenuCard };
 export default MenuCard;
-
-

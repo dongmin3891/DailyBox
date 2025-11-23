@@ -32,7 +32,7 @@ export interface FeaturesGridWidgetProps {
 }
 
 /**
- * 기본 기능 목록
+ * 기본 기능 목록 (핵심 기능만)
  */
 const defaultFeatures: FeatureItem[] = [
     {
@@ -83,22 +83,6 @@ const defaultFeatures: FeatureItem[] = [
         href: '/fortune',
         enabled: false,
     },
-    {
-        icon: '🎨',
-        title: '디자인 시스템',
-        description: 'UI 컴포넌트 가이드',
-        theme: 'secondary',
-        href: '/design-system',
-        enabled: true,
-    },
-    {
-        icon: '🌈',
-        title: '컬러 가이드',
-        description: 'Toss 색상 시스템',
-        theme: 'warning',
-        href: '/colors',
-        enabled: true,
-    },
 ];
 
 /**
@@ -126,14 +110,14 @@ const FeatureItem: React.FC<{ feature: FeatureItem }> = ({ feature }) => {
             clickable={true}
             hoverable={true}
             onClick={!feature.enabled ? () => handleComingSoon(feature.title) : undefined}
-            className={`${themeColors[feature.theme]} border-2 min-h-[120px] flex flex-col justify-center`}
+            className={`${themeColors[feature.theme]} border-2 min-h-[88px] flex flex-col justify-center transition-transform active:scale-95`}
         >
             <div className="text-center">
-                <div className="text-4xl mb-3" aria-hidden="true">
+                <div className="text-3xl mb-2" aria-hidden="true">
                     {feature.icon}
                 </div>
-                <h3 className="text-neutral-gray-700 font-semibold mb-1 text-sm">{feature.title}</h3>
-                <p className="text-neutral-gray-500 text-xs">{feature.description}</p>
+                <h3 className="text-neutral-gray-700 font-semibold mb-1 text-sm leading-tight">{feature.title}</h3>
+                <p className="text-neutral-gray-500 text-xs leading-tight">{feature.description}</p>
             </div>
         </Card>
     );
@@ -156,13 +140,13 @@ const FeatureItem: React.FC<{ feature: FeatureItem }> = ({ feature }) => {
 
 const FeaturesGridWidget: React.FC<FeaturesGridWidgetProps> = ({ features = defaultFeatures, className = '' }) => {
     return (
-        <Card variant="elevated" padding="md" className={className}>
-            <div className="grid grid-cols-2 gap-3 max-h-[600px] overflow-y-auto">
+        <div className={className}>
+            <div className="grid grid-cols-2 gap-3">
                 {features.map((feature, index) => (
                     <FeatureItem key={`${feature.title}-${index}`} feature={feature} />
                 ))}
             </div>
-        </Card>
+        </div>
     );
 };
 

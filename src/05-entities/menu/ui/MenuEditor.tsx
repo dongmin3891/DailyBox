@@ -7,23 +7,41 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { Input } from '@/shared/ui';
-import type { Menu } from '../model/types';
+import type { Menu, MenuCategory, TimeOfDay } from '../model/types';
 
 export interface MenuEditorProps {
     /** 편집할 메뉴 (없으면 새 메뉴) */
     menu?: Menu & { id: number };
     /** 저장 핸들러 */
-    onSave: (menu: { name: string; tags: string[] }) => void;
+    onSave: (menu: { name: string; tags: string[]; category?: MenuCategory; timeOfDay?: TimeOfDay[] }) => void;
     /** 취소 핸들러 */
     onCancel?: () => void;
     /** 추가 CSS 클래스 */
     className?: string;
 }
 
+const categoryOptions: { value: MenuCategory; label: string; icon: string }[] = [
+    { value: 'korean', label: '한식', icon: '🍚' },
+    { value: 'chinese', label: '중식', icon: '🥢' },
+    { value: 'japanese', label: '일식', icon: '🍣' },
+    { value: 'western', label: '양식', icon: '🍝' },
+    { value: 'snack', label: '분식', icon: '🍢' },
+    { value: 'other', label: '기타', icon: '🍽️' },
+];
+
+const timeOfDayOptions: { value: TimeOfDay; label: string; icon: string }[] = [
+    { value: 'breakfast', label: '아침', icon: '🌅' },
+    { value: 'lunch', label: '점심', icon: '☀️' },
+    { value: 'dinner', label: '저녁', icon: '🌙' },
+    { value: 'snack', label: '야식', icon: '🌙' },
+];
+
 const MenuEditor: React.FC<MenuEditorProps> = ({ menu, onSave, onCancel, className = '' }) => {
     const [name, setName] = useState(menu?.name || '');
     const [tagInput, setTagInput] = useState('');
     const [tags, setTags] = useState<string[]>(menu?.tags || []);
+    const [category, setCategory] = useState<MenuCategory | undefined>(menu?.category);
+    const [timeOfDay, setTimeOfDay] = useState<TimeOfDay[]>(menu?.timeOfDay || []);
     const nameInputRef = useRef<HTMLInputElement>(null);
 
     // 컴포넌트 마운트 시 또는 menu prop 변경 시 초기화
@@ -31,11 +49,15 @@ const MenuEditor: React.FC<MenuEditorProps> = ({ menu, onSave, onCancel, classNa
         if (menu) {
             setName(menu.name);
             setTags(menu.tags);
+            setCategory(menu.category);
+            setTimeOfDay(menu.timeOfDay || []);
         } else {
             // 새 메뉴 추가 모드: 상태 초기화
             setName('');
             setTags([]);
             setTagInput('');
+            setCategory(undefined);
+            setTimeOfDay([]);
         }
     }, [menu]);
 
@@ -59,6 +81,12 @@ const MenuEditor: React.FC<MenuEditorProps> = ({ menu, onSave, onCancel, classNa
 
     const handleRemoveTag = (tagToRemove: string) => {
         setTags(tags.filter((tag) => tag !== tagToRemove));
+    };
+
+    const handleTimeOfDayToggle = (time: TimeOfDay) => {
+        setTimeOfDay((prev) =>
+            prev.includes(time) ? prev.filter((t) => t !== time) : [...prev, time]
+        );
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -85,7 +113,7 @@ const MenuEditor: React.FC<MenuEditorProps> = ({ menu, onSave, onCancel, classNa
             return;
         }
 
-        const menuData = { name: name.trim(), tags };
+        const menuData = { name: name.trim(), tags, category, timeOfDay: timeOfDay.length > 0 ? timeOfDay : undefined };
 
         // onSave가 Promise를 반환할 수 있으므로 await 처리
         try {
@@ -96,6 +124,8 @@ const MenuEditor: React.FC<MenuEditorProps> = ({ menu, onSave, onCancel, classNa
                 setName('');
                 setTags([]);
                 setTagInput('');
+                setCategory(undefined);
+                setTimeOfDay([]);
             }
         } catch (error) {
             console.error('Failed to save menu:', error);
@@ -114,6 +144,62 @@ const MenuEditor: React.FC<MenuEditorProps> = ({ menu, onSave, onCancel, classNa
                 placeholder="메뉴 이름 (예: 치킨, 파스타)"
                 className="text-lg font-semibold"
             />
+
+            {/* 카테고리 선택 */}
+            <div className="space-y-2">
+                <label className="text-sm font-medium text-text-primary">카테고리 (선택사항)</label>
+                <div className="grid grid-cols-3 gap-2">
+                    {categoryOptions.map((option) => {
+                        const isSelected = category === option.value;
+                        return (
+                            <button
+                                key={option.value}
+                                type="button"
+                                onClick={() => setCategory(isSelected ? undefined : option.value)}
+                                className={`
+                                    flex flex-col items-center justify-center gap-1
+                                    px-3 py-2 rounded-lg border-2 transition-all
+                                    ${isSelected 
+                                        ? 'bg-toss-blue/10 border-toss-blue text-toss-blue' 
+                                        : 'bg-neutral-gray-50 border-neutral-gray-200 text-text-secondary hover:border-neutral-gray-300'
+                                    }
+                                `}
+                            >
+                                <span className="text-xl">{option.icon}</span>
+                                <span className="text-xs font-medium">{option.label}</span>
+                            </button>
+                        );
+                    })}
+                </div>
+            </div>
+
+            {/* 시간대 선택 */}
+            <div className="space-y-2">
+                <label className="text-sm font-medium text-text-primary">시간대 (선택사항, 복수 선택 가능)</label>
+                <div className="grid grid-cols-4 gap-2">
+                    {timeOfDayOptions.map((option) => {
+                        const isSelected = timeOfDay.includes(option.value);
+                        return (
+                            <button
+                                key={option.value}
+                                type="button"
+                                onClick={() => handleTimeOfDayToggle(option.value)}
+                                className={`
+                                    flex flex-col items-center justify-center gap-1
+                                    px-3 py-2 rounded-lg border-2 transition-all
+                                    ${isSelected 
+                                        ? 'bg-semantic-success/15 border-semantic-success/30 text-semantic-success' 
+                                        : 'bg-neutral-gray-50 border-neutral-gray-200 text-text-secondary hover:border-neutral-gray-300'
+                                    }
+                                `}
+                            >
+                                <span className="text-xl">{option.icon}</span>
+                                <span className="text-xs font-medium">{option.label}</span>
+                            </button>
+                        );
+                    })}
+                </div>
+            </div>
 
             {/* 태그 입력 */}
             <div className="space-y-2">

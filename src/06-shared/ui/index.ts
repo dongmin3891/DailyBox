@@ -11,6 +11,7 @@ export { default as TossColorGuide } from './TossColorGuide';
 // 새로운 공통 UI 컴포넌트들
 export { default as Button } from './Button';
 export { default as Input } from './Input';
+export { default as CategorySelector } from './CategorySelector';
 export { default as Card } from './Card';
 export { default as Badge } from './Badge';
 export { default as IconButton } from './IconButton';
@@ -23,6 +24,8 @@ export type { FeatureCardProps } from './FeatureCard';
 export type { ButtonProps } from './Button';
 export type { InputProps } from './Input';
 export type { CardProps } from './Card';
+export { PieChart } from './PieChart';
+export type { PieChartProps, PieChartData } from './PieChart';
 export type { BadgeProps } from './Badge';
 export type { IconButtonProps } from './IconButton';
 export type { DividerProps } from './Divider';

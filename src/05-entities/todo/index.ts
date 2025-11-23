@@ -8,3 +8,7 @@ export { calculateWeekStats } from './lib/todoStats';
 export type { WeekStats } from './lib/todoStats';
 export { createCalendarMonth, groupTodosByDate, isToday, isCurrentMonth } from './lib/todoCalendar';
 export type { CalendarDay, CalendarMonth } from './lib/todoCalendar';
+export { calculateTodoCompletionDashboard, calculateTodayCompletion, calculateWeekCompletion, calculateMonthCompletion } from './lib/todoCompletionStats';
+export type { TodoCompletionDashboard, CompletionStats } from './lib/todoCompletionStats';
+export { calculateWeekPeriodStats, calculateMonthPeriodStats } from './lib/todoPeriodStats';
+export type { PeriodStats } from './lib/todoPeriodStats';
