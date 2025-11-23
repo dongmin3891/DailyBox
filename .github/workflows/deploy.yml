@@ -1,0 +1,35 @@
+name: Deploy ilsangham via Docker
+
+on:
+    push:
+        branches:
+            - main # main 브랜치에 push 될 때마다 실행
+
+jobs:
+    deploy:
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Deploy on miniPC with Docker Compose
+              uses: appleboy/ssh-action@v1.0.3
+              with:
+                  host: ${{ secrets.MINIPC_HOST }}
+                  username: ${{ secrets.MINIPC_USER }}
+                  key: ${{ secrets.MINIPC_SSH_KEY }}
+                  port: ${{ secrets.MINIPC_PORT }}
+                  script: |
+                      set -e
+
+                      cd /var/www/ilsangham
+
+                      echo ">>> Git Pull"
+                      git pull origin main
+
+                      echo ">>> Docker Compose Up (build & restart)"
+                      docker compose up -d --build
+
+                      echo ">>> Clean up old images"
+                      docker image prune -f
