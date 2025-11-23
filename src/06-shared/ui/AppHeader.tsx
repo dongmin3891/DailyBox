@@ -12,7 +12,7 @@ export interface AppHeaderProps {
     title?: string;
 }
 
-const AppHeader: React.FC<AppHeaderProps> = ({ icon = '🗂️', title = '일상함' }) => {
+const AppHeader: React.FC<AppHeaderProps> = ({ icon = '🗂️', title = '일상함!' }) => {
     return (
         <header className="bg-bg-primary rounded-2xl px-4 py-4 mb-4 shadow-sm">
             <div className="flex items-center">
