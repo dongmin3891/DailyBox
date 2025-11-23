@@ -122,7 +122,7 @@ export class DailyboxDb extends Dexie {
                 // 기존 타이머 데이터 마이그레이션
                 const timers = await tx.table('timers').toArray();
                 await Promise.all(
-                    timers.map(async (timer: any) => {
+                    timers.map(async (timer: DbTimer & { durationMs?: number }) => {
                         if (!timer.category || !timer.startedAt) {
                             await tx.table('timers').update(timer.id, {
                                 category: 'work' as const,

@@ -5,7 +5,9 @@
  * FSD 아키텍처의 Pages Layer에 위치하며, widgets를 조합하여 완전한 페이지를 구성합니다.
  */
 
-import React from 'react';
+'use client';
+
+import React, { Suspense } from 'react';
 import { TodoEditorWidget } from '@/widgets/todo';
 
 export interface TodoNewPageProps {
@@ -22,7 +24,9 @@ export interface TodoNewPageProps {
 export const TodoNewPage: React.FC<TodoNewPageProps> = ({ className = '' }) => {
     return (
         <div className={`todo-new-page ${className}`} role="main" aria-label="새 할 일 작성 페이지">
-            <TodoEditorWidget />
+            <Suspense fallback={<div>로딩 중...</div>}>
+                <TodoEditorWidget />
+            </Suspense>
         </div>
     );
 };

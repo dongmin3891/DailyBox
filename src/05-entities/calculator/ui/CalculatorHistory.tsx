@@ -120,7 +120,7 @@ const CalculatorHistory: React.FC<CalculatorHistoryProps> = ({
 
     if (isLoading) {
         return (
-            <Card variant="default" padding="lg" rounded="2xl" className={className}>
+            <Card variant="default" padding="lg" className={className}>
                 <div className="flex items-center justify-center py-8">
                     <div className="text-text-secondary">기록을 불러오는 중...</div>
                 </div>
@@ -133,7 +133,7 @@ const CalculatorHistory: React.FC<CalculatorHistoryProps> = ({
     if (!hasHistory && !isLoading) {
         return (
             <div role="region" aria-label="계산 기록">
-                <Card variant="default" padding="lg" rounded="2xl" className={className}>
+                <Card variant="default" padding="lg" className={className}>
                     <div className="flex items-center justify-between mb-4">
                         <h3 className="text-text-primary font-semibold text-lg flex items-center gap-2">
                             <span className="text-xl" aria-hidden="true">
@@ -156,7 +156,7 @@ const CalculatorHistory: React.FC<CalculatorHistoryProps> = ({
 
     return (
         <div role="region" aria-label="계산 기록" className={`flex flex-col h-full ${className}`}>
-            <Card variant="default" padding="lg" rounded="2xl" className="flex flex-col h-full overflow-hidden">
+            <Card variant="default" padding="lg" className="flex flex-col h-full overflow-hidden">
                 <div className="flex items-center justify-between mb-4 flex-shrink-0">
                     <h3 className="text-text-primary font-semibold text-lg flex items-center gap-2">
                         <span className="text-xl" aria-hidden="true">

@@ -1,1 +1,5 @@
-export { MemoListPage as default } from '@/pages/memo';
+import { MemoListPage } from '@/pages/memo';
+
+export default function Page() {
+  return <MemoListPage />;
+}

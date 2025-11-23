@@ -1,2 +1,6 @@
-export { MemoNewPage as default } from '@/pages/memo/new';
+import { MemoNewPage } from '@/pages/memo/new';
+
+export default function Page() {
+  return <MemoNewPage />;
+}
 

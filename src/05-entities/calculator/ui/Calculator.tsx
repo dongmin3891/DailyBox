@@ -348,9 +348,9 @@ const Calculator: React.FC<CalculatorProps> = ({
     }, [display, expression, disableKeyboard, waitingForOperand, isEditingExpression]);
 
     return (
-        <Card variant="elevated" padding="lg" rounded="2xl" className={`overflow-hidden ${className}`}>
+        <Card variant="elevated" padding="lg" className={`overflow-hidden ${className}`}>
             {/* 계산기 디스플레이 */}
-            <Card variant="default" padding="lg" rounded="2xl" className="mb-4">
+            <Card variant="default" padding="lg" className="mb-4">
                 <div className="text-right min-w-0">
                     {/* 정산 모드 표시 */}
                     {settlementMode && (

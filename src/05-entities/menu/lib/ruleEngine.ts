@@ -113,7 +113,7 @@ export const weightedRandomSelect = <T extends { id: number }>(
     if (totalWeight === 0) return null;
 
     // 랜덤 값 선택
-    let random = Math.random() * totalWeight;
+    const random = Math.random() * totalWeight;
     let currentWeight = 0;
 
     for (const item of items) {

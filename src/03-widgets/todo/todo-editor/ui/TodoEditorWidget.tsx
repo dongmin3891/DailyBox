@@ -26,7 +26,7 @@ const TodoEditorWidget: React.FC<TodoEditorWidgetProps> = ({ todoId, className =
     const todo = todoId ? todos.find((t) => t.id === todoId) : undefined;
     
     // URL 쿼리 파라미터에서 마감일 읽기
-    const dueDateFromUrl = searchParams.get('dueDate');
+    const dueDateFromUrl = searchParams ? searchParams.get('dueDate') : null;
     const [initialDueDate, setInitialDueDate] = useState<string | undefined>(undefined);
 
     useEffect(() => {

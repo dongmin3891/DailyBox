@@ -1,2 +1,6 @@
-export { TodoListPage as default } from '@/pages/todo';
+import { TodoListPage } from '@/pages/todo';
+
+export default function Page() {
+  return <TodoListPage />;
+}
 

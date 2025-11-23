@@ -31,9 +31,9 @@ export const useTodoSlice = create<TodoSlice>((set, get) => ({
             // 기존 데이터 호환성: 누락된 필드에 기본값 설정
             const todosWithDefaults = items.map((item) => ({
                 ...item,
-                priority: (item as any).priority || 'medium',
-                category: (item as any).category || 'personal',
-                repeat: (item as any).repeat || 'none',
+                priority: ('priority' in item && item.priority) || 'medium',
+                category: ('category' in item && item.category) || 'personal',
+                repeat: ('repeat' in item && item.repeat) || 'none',
             })) as TodoItem[];
             set({ todos: todosWithDefaults, isLoading: false });
         } catch (error) {

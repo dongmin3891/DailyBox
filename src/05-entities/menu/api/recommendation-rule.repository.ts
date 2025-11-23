@@ -1,7 +1,11 @@
 import { db, DbRecommendationRule } from '@/shared/lib/db/dexie';
 import type { Repository, Identifier } from '@/shared/lib/repository/base-repository';
 
-export const recommendationRuleRepository: Repository<DbRecommendationRule> = {
+interface RecommendationRuleRepository extends Repository<DbRecommendationRule> {
+    getEnabled(): Promise<DbRecommendationRule[]>;
+}
+
+export const recommendationRuleRepository: RecommendationRuleRepository = {
     async add(entity) {
         return db.recommendationRules.add(entity);
     },

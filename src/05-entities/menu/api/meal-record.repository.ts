@@ -1,7 +1,13 @@
 import { db, DbMealRecord } from '@/shared/lib/db/dexie';
 import type { Repository, Identifier } from '@/shared/lib/repository/base-repository';
 
-export const mealRecordRepository: Repository<DbMealRecord> = {
+interface MealRecordRepository extends Repository<DbMealRecord> {
+    getByDateRange(startDate: number, endDate: number): Promise<DbMealRecord[]>;
+    getByTimeOfDay(timeOfDay: DbMealRecord['timeOfDay']): Promise<DbMealRecord[]>;
+    getByCategory(category: DbMealRecord['category']): Promise<DbMealRecord[]>;
+}
+
+export const mealRecordRepository: MealRecordRepository = {
     async add(entity) {
         return db.mealRecords.add(entity);
     },

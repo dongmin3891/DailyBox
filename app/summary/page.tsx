@@ -1,2 +1,6 @@
-export { SummaryPage as default } from '@/pages/summary';
+import { SummaryPage } from '@/pages/summary';
+
+export default function Page() {
+  return <SummaryPage />;
+}
 
